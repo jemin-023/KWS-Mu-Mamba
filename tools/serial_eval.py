@@ -114,9 +114,16 @@ def run_serial_eval(port: str, baud: int, subset: int, data_dir: str):
     indices = range(num_eval)
 
     print(f"Running on-device serial test on {num_eval} clips...")
-    bit_identical_count = 0
-    total_evaluated = 0
+    bit_identical_clips = 0
+    total_clips_evaluated = 0
+    total_tokens_evaluated = 0
+    bit_identical_tokens = 0
+    device_correct = 0
+    host_correct = 0
+    all_cycles = []
     max_logit_diff = 0
+
+    TARGET_EVAL_LEN = 51 * 320 # 16,320 samples (51 hops)
 
     pbar = tqdm(indices, desc="Serial Eval")
     for idx in pbar:
@@ -132,29 +139,21 @@ def run_serial_eval(port: str, baud: int, subset: int, data_dir: str):
             except Exception:
                 audio = np.zeros(TARGET_AUDIO_LEN, dtype=np.int16)
 
-        # Pad to exactly 16,192 samples (50 tokens: 512 initial + 49 hops of 320)
-        if len(audio) < TARGET_AUDIO_LEN:
-            audio = np.pad(audio, (0, TARGET_AUDIO_LEN - len(audio)), mode="constant")
-        elif len(audio) > TARGET_AUDIO_LEN:
-            audio = audio[:TARGET_AUDIO_LEN]
+        # Pad to exactly 16,320 samples (51 hops of 320 samples -> 50 tokens)
+        if len(audio) < TARGET_EVAL_LEN:
+            audio = np.pad(audio, (0, TARGET_EVAL_LEN - len(audio)), mode="constant")
+        elif len(audio) > TARGET_EVAL_LEN:
+            audio = audio[:TARGET_EVAL_LEN]
 
         # Reset both host and device streaming state
         lib.mm_reset(ctypes.byref(ctx))
         send_reset(ser)
 
+        clip_bit_identical = True
         device_last_logits = None
-        host_last_logits = (ctypes.c_int32 * 12)()
+        host_last_logits = None
 
-        # Push initial 512 samples, then 49 hops of 320 samples
-        # Chunk 0: initial 512 samples
-        # Split into 320 + 192, or send in 320 hops
-        # To match firmware's 320-sample hops:
-        # Pad audio with 128 leading samples so 51 hops of 320 feed exactly 50 tokens
-        # Or send audio in 320-sample hops
-        num_hops = len(audio) // 320
-        device_tokens_received = 0
-        host_tokens_stepped = 0
-
+        num_hops = 51
         for h in range(num_hops):
             chunk = audio[h * 320 : (h + 1) * 320]
             chunk_bytes = chunk.astype(np.int16).tobytes()
@@ -166,39 +165,83 @@ def run_serial_eval(port: str, baud: int, subset: int, data_dir: str):
 
             # Read device response header (4 bytes)
             resp_hdr = read_resp_hdr(ser, timeout_sec=1.0)
+            dev_stepped = False
+            dev_token_logits = None
             if len(resp_hdr) == 4 and resp_hdr[:2] == RESP_SYNC:
-                stepped = resp_hdr[3]
-                if stepped:
-                    raw_logits = read_exact(ser, 12 * 4) # 12 int32s
-                    if len(raw_logits) == 48:
-                        device_last_logits = np.frombuffer(raw_logits, dtype=np.int32)
-                        device_tokens_received += 1
+                if resp_hdr[3]:
+                    dev_stepped = True
+                    payload = read_exact(ser, 12 * 4 + 4) # 48 bytes logits + 4 bytes cycles
+                    if len(payload) == 52:
+                        dev_token_logits = np.frombuffer(payload[:48], dtype=np.int32)
+                        cycles = int.from_bytes(payload[48:52], "little")
+                        all_cycles.append(cycles)
+                        device_last_logits = dev_token_logits
 
-            # Step host engine with the exact same chunk
+            # Step host engine with exact same push/step/remainder logic
             c_chunk = (ctypes.c_int16 * len(chunk))(*chunk)
-            lib.mm_push_audio(ctypes.byref(ctx), c_chunk, len(chunk))
-            if lib.mm_step_q(ctypes.byref(ctx), None, host_last_logits):
-                host_tokens_stepped += 1
+            pushed = lib.mm_push_audio(ctypes.byref(ctx), c_chunk, len(chunk))
+            host_token_logits = (ctypes.c_int32 * 12)()
+            host_stepped = lib.mm_step_q(ctypes.byref(ctx), None, host_token_logits)
+            if pushed < len(chunk):
+                rem_chunk = chunk[pushed:]
+                c_rem = (ctypes.c_int16 * len(rem_chunk))(*rem_chunk)
+                lib.mm_push_audio(ctypes.byref(ctx), c_rem, len(rem_chunk))
 
-        if device_last_logits is not None:
-            host_arr = np.array(host_last_logits, dtype=np.int32)
-            diff = int(np.max(np.abs(device_last_logits - host_arr)))
-            if diff > max_logit_diff:
-                max_logit_diff = diff
+            if host_stepped:
+                host_arr = np.array(host_token_logits, dtype=np.int32)
+                host_last_logits = host_arr
+                if dev_stepped and dev_token_logits is not None:
+                    total_tokens_evaluated += 1
+                    diff = int(np.max(np.abs(dev_token_logits - host_arr)))
+                    if diff > max_logit_diff:
+                        max_logit_diff = diff
+                    if diff == 0:
+                        bit_identical_tokens += 1
+                    else:
+                        clip_bit_identical = False
+                else:
+                    clip_bit_identical = False
 
-            if diff == 0:
-                bit_identical_count += 1
-            total_evaluated += 1
+        if device_last_logits is not None and host_last_logits is not None:
+            dev_pred = int(np.argmax(device_last_logits))
+            host_pred = int(np.argmax(host_last_logits))
+            if dev_pred == label:
+                device_correct += 1
+            if host_pred == label:
+                host_correct += 1
+            if clip_bit_identical:
+                bit_identical_clips += 1
+            total_clips_evaluated += 1
 
             pbar.set_postfix({
-                "bit_identical": f"{bit_identical_count}/{total_evaluated}",
+                "dev_acc": f"{device_correct/total_clips_evaluated*100:.1f}%",
+                "tok_bit_id": f"{bit_identical_tokens/max(1, total_tokens_evaluated)*100:.1f}%",
                 "max_diff": max_logit_diff
             })
 
-    print(f"\nOn-Device Serial Validation Complete!")
-    print(f"Evaluated Clips: {total_evaluated}")
-    print(f"Bit-Identical Clips: {bit_identical_count} ({bit_identical_count/max(1, total_evaluated)*100:.2f}%)")
+    print(f"\n================ ON-DEVICE EVALUATION REPORT ================")
+    print(f"Total Clips Evaluated:    {total_clips_evaluated}")
+    print(f"Total Tokens Evaluated:   {total_tokens_evaluated}")
+    dev_acc = device_correct / max(1, total_clips_evaluated) * 100.0
+    host_acc = host_correct / max(1, total_clips_evaluated) * 100.0
+    tok_id = bit_identical_tokens / max(1, total_tokens_evaluated) * 100.0
+    clip_id = bit_identical_clips / max(1, total_clips_evaluated) * 100.0
+    print(f"Device Accuracy:          {dev_acc:.2f}% ({device_correct}/{total_clips_evaluated})")
+    print(f"Host Accuracy:            {host_acc:.2f}% ({host_correct}/{total_clips_evaluated})")
+    print(f"Per-Token Bit-Identity:   {tok_id:.2f}% ({bit_identical_tokens}/{total_tokens_evaluated})")
+    print(f"Bit-Identical Clips:      {clip_id:.2f}% ({bit_identical_clips}/{total_clips_evaluated})")
     print(f"Maximum Logit Difference: {max_logit_diff}")
+
+    if all_cycles:
+        cycles_arr = np.array(all_cycles, dtype=np.float64)
+        min_ms = np.min(cycles_arr) / 160000.0
+        med_ms = np.median(cycles_arr) / 160000.0
+        mean_ms = np.mean(cycles_arr) / 160000.0
+        print(f"\n--- On-Board Timing (@ 160 MHz) ---")
+        print(f"Min Per-Token Time:       {min_ms:.2f} ms ({int(np.min(cycles_arr))} cycles)")
+        print(f"Median Per-Token Time:    {med_ms:.2f} ms ({int(np.median(cycles_arr))} cycles)")
+        print(f"Mean Per-Token Time:      {mean_ms:.2f} ms ({int(np.mean(cycles_arr))} cycles)")
+    print(f"=============================================================\n")
 
 def main():
     parser = argparse.ArgumentParser(description="Run on-device serial evaluation for ESP32-C3")

@@ -35,9 +35,12 @@ static uint16_t calc_crc16(const uint8_t *data, size_t len) {
 #include "driver/uart.h"
 #include "driver/usb_serial_jtag.h"
 #include "esp_timer.h"
+#include "esp_cpu.h"
 #define UART_NUM UART_NUM_0
 
 static int s_active_interface = 0; // 0: detect, 1: USB_SERIAL_JTAG, 2: UART0
+#else
+static inline uint32_t esp_cpu_get_cycle_count(void) { return 0; }
 #endif
 
 static int serial_init(void) {
@@ -164,16 +167,35 @@ int audio_serial_process_frame(mm_context_t *ctx) {
             return -2;
         }
 
-        mm_push_audio(ctx, pcm_buf, n_samples);
+        /* Push audio into buffer, handling partial push across reset */
+        size_t pushed = mm_push_audio(ctx, pcm_buf, n_samples);
 
         /* Execute native fixed-point inference engine */
         int32_t logits_q[MM_NUM_CLASSES] = {0};
-        int stepped = mm_step_q(ctx, NULL, logits_q);
+        uint32_t cycles = 0;
+        int stepped = 0;
+
+        if (ctx->audio_buf_count >= MM_FRAME_LEN) {
+#ifdef ESP_PLATFORM
+            uint32_t c0 = esp_cpu_get_cycle_count();
+            stepped = mm_step_q(ctx, NULL, logits_q);
+            uint32_t c1 = esp_cpu_get_cycle_count();
+            cycles = c1 - c0;
+#else
+            stepped = mm_step_q(ctx, NULL, logits_q);
+#endif
+        }
+
+        /* Push remainder if buffer was filled prior to step */
+        if (pushed < n_samples) {
+            mm_push_audio(ctx, pcm_buf + pushed, n_samples - pushed);
+        }
 
         uint8_t resp_hdr[] = { RESP_SYNC_0, RESP_SYNC_1, 0x00, (uint8_t)stepped };
         serial_write_bytes(resp_hdr, sizeof(resp_hdr));
         if (stepped) {
             serial_write_bytes((const uint8_t *)logits_q, sizeof(logits_q));
+            serial_write_bytes((const uint8_t *)&cycles, sizeof(cycles));
         }
         return 1;
     }
