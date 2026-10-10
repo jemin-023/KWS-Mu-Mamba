@@ -9,6 +9,7 @@ __pycache__/
 *$py.class
 .venv/
 env/
+.pytest_cache/
 
 # Build artifacts
 *.o
