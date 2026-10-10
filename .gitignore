@@ -1,0 +1,26 @@
+# Data directories
+data/
+*.tar.gz
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+
+# Build artifacts
+*.o
+*.a
+*.so
+build/
+bin/
+firmware/.pio/
+firmware/sdkconfig.*
+!firmware/sdkconfig.defaults
+*.bin
+*.elf
+engine/tests/test_frontend
+
+

@@ -1,0 +1,12 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "audio_serial.c"
+        "bench.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        engine
+        driver
+        esp_timer
+)
