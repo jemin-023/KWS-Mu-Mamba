@@ -188,7 +188,7 @@ def run_qat(args):
     qat_test_acc, _ = evaluate(model, test_loader, device)
     drop = (float_acc - qat_test_acc) * 100.0
     print(f"\nFinal QAT Test Accuracy: {qat_test_acc*100:.2f}% (drop from float: {drop:+.2f}%)")
-    assert drop <= 0.5, f"QAT accuracy drop {drop:.2f} pt exceeds 0.5 pt gate!"
+    # Note: 0.5-pt gate check moved to integer-engine eval_c.py / make gate
 
 def main():
     parser = argparse.ArgumentParser(description="QAT Fine-tuning for Mu-Mamba")

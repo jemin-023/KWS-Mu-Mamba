@@ -45,6 +45,15 @@ extern "C" {
 #ifndef MM_NUM_LAYERS
 #define MM_NUM_LAYERS     2     /* L = 2 */
 #endif
+#ifndef MM_Q_RESID
+#define MM_Q_RESID        6     /* Fractional bits for residual stream */
+#endif
+#ifndef MM_Q_XPROJ
+#define MM_Q_XPROJ        10    /* Fractional bits for x_proj output */
+#endif
+#ifndef MM_Q_INPROJ
+#define MM_Q_INPROJ       11    /* Fractional bits for in_proj output */
+#endif
 
 /* Class labels */
 typedef enum {
@@ -122,6 +131,27 @@ int32_t mm_log2_q8(uint32_t x);
 int32_t mm_rsqrt_q12(uint32_t x);
 int32_t mm_rsqrt_q15(uint32_t x);
 int16_t mm_silu_q15(int16_t x);
+
+const char *mm_weights_id(void);
+
+/* Saturation tracking */
+typedef struct {
+    uint64_t stem_total;
+    uint64_t stem_sat;
+    uint64_t in_proj_total;
+    uint64_t in_proj_sat;
+    uint64_t conv_total;
+    uint64_t conv_sat;
+    uint64_t x_proj_total;
+    uint64_t x_proj_sat;
+    uint64_t resid_total;
+    uint64_t resid_sat;
+    uint64_t h_total;
+    uint64_t h_sat;
+} mm_sat_stats_t;
+
+void mm_get_sat_stats(mm_sat_stats_t *out);
+void mm_reset_sat_stats(void);
 
 #ifdef __cplusplus
 }

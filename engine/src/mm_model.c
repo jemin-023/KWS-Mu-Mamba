@@ -19,6 +19,25 @@ void mm_set_weights_q(const mm_model_weights_q_t *w) {
     g_model_weights_q = w;
 }
 
+/* Saturation tracking counters */
+mm_sat_stats_t g_mm_sat_stats = {0};
+
+void mm_get_sat_stats(mm_sat_stats_t *out) {
+    if (out) *out = g_mm_sat_stats;
+}
+
+void mm_reset_sat_stats(void) {
+    memset(&g_mm_sat_stats, 0, sizeof(g_mm_sat_stats));
+}
+
+const char *mm_weights_id(void) {
+#ifdef MM_WEIGHTS_ID
+    return MM_WEIGHTS_ID;
+#else
+    return "unknown";
+#endif
+}
+
 int16_t mm_silu_q15(int16_t x) {
     return (int16_t)mm_lut_interp_s16(mm_lut_silu_q12, (int32_t)x, -(8 << 12), 7, 513);
 }
@@ -154,6 +173,10 @@ int mm_step_q(mm_context_t *ctx, int16_t *features_out, int32_t *logits_out) {
             acc += (int32_t)g_model_weights_q->stem_w[d][m] * ctx->mel_features[m];
         }
         int64_t scaled = (acc * g_model_weights_q->stem_scale_mult[d]) >> g_model_weights_q->stem_scale_shift[d];
+#ifdef MM_DEBUG_SAT
+        g_mm_sat_stats.stem_total++;
+        if (scaled > 32767 || scaled < -32768) g_mm_sat_stats.stem_sat++;
+#endif
         if (scaled > 32767) scaled = 32767;
         if (scaled < -32768) scaled = -32768;
         h_cur[d] = (int16_t)scaled;
@@ -172,7 +195,7 @@ int mm_step_q(mm_context_t *ctx, int16_t *features_out, int32_t *logits_out) {
         memcpy(h_cur, h_next, sizeof(h_cur));
     }
 
-    /* Final RMSNorm (in Q12) */
+    /* Final RMSNorm */
     uint64_t sum_sq = 0;
     for (int d = 0; d < MM_DIM; d++) {
         int32_t val = h_cur[d];
@@ -183,8 +206,8 @@ int mm_step_q(mm_context_t *ctx, int16_t *features_out, int32_t *logits_out) {
 
     int16_t h_norm[MM_DIM];
     for (int d = 0; d < MM_DIM; d++) {
-        int32_t norm = ((int32_t)h_cur[d] * rsqrt_val) >> 12;
-        h_norm[d] = (int16_t)(((int32_t)norm * g_model_weights_q->final_norm_w[d]) >> 15);
+        int32_t norm = (int32_t)(((int64_t)h_cur[d] * rsqrt_val) >> 12);
+        h_norm[d] = (int16_t)(((int32_t)norm * g_model_weights_q->final_norm_w[d]) >> 14);
     }
 
     /* Head: W8A16 matvec -> 12 class logits (int32) */

@@ -30,7 +30,7 @@ void mm_frontend_process_frame(const int16_t *pcm_512, int16_t *mel_40_out) {
 
     /* 2. Apply pre-shift, Hann window, and bit-reversal into FFT buffers */
     for (int n = 0; n < MM_FFT_SIZE; n++) {
-        int32_t s = (int32_t)pcm_512[n] << shift;
+        int32_t s = (int32_t)pcm_512[n] * (1 << shift);
         int32_t win_val = (s * mm_hann_window_q15[n]) >> 15;
         uint16_t rev_idx = mm_bitrev_512[n];
         re[rev_idx] = (int16_t)win_val;

@@ -43,32 +43,15 @@ int32_t mm_log2_q8(uint32_t x) {
     return (integer_part << 8) + (int32_t)mantissa;
 }
 
-static uint32_t mm_isqrt(uint32_t n) {
-    uint32_t res = 0;
-    uint32_t bit = 1u << 30;
-    while (bit > n) bit >>= 2;
-    while (bit != 0) {
-        if (n >= res + bit) {
-            n -= res + bit;
-            res = (res >> 1) + bit;
-        } else {
-            res >>= 1;
-        }
-        bit >>= 2;
-    }
-    return res;
-}
 
-int32_t mm_rsqrt_q12(uint32_t x) {
-    if (x == 0) return 32767;
-    uint32_t s = mm_isqrt(x);
-    if (s == 0) return 32767;
-    /* Input x is in Q24 (from Q12 squared), so s is in Q12.
-     * To get 1/RMS in Q12: (2^12 / s) * 2^12 = 2^24 / s.
-     */
-    uint64_t num = (uint64_t)1 << 24; /* 2^24 */
-    uint32_t res = (uint32_t)(num / s);
-    return (res > 32767) ? 32767 : (int32_t)res;
+int32_t mm_rsqrt_q12(uint32_t x) {            /* returns 4096 / rms_raw; input Q format cancels */
+    if (x == 0) return 1 << 24;
+    uint64_t n = (uint64_t)x << 16, res = 0, bit = (uint64_t)1 << 46;
+    while (bit > n) bit >>= 2;
+    while (bit) { if (n >= res + bit) { n -= res + bit; res = (res >> 1) + bit; } else res >>= 1; bit >>= 2; }
+    if (res == 0) return 1 << 24;
+    uint64_t r = ((uint64_t)1 << 32) / res;
+    return r > (1u << 24) ? (1 << 24) : (int32_t)r;
 }
 
 int32_t mm_rsqrt_q15(uint32_t x) {
