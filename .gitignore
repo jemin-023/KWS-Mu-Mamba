@@ -24,4 +24,8 @@ firmware/sdkconfig.*
 *.elf
 engine/tests/test_frontend
 
-
+# Editor & OS files
+.DS_Store
+*~
+*.swp
+*.swo
