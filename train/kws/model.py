@@ -314,6 +314,19 @@ class MuMambaKWS(nn.Module):
         self.final_norm = RMSNorm(d_model)
         self.head = nn.Linear(d_model, num_classes)
 
+    def forward_seq(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Batched sequence forward:
+          x: (B, T, 40)
+        Returns:
+          logits: (B, T, 12) for all tokens T
+        """
+        h = self.stem(x) # (B, T, D)
+        for layer in self.layers:
+            h = layer(h)
+        logits = self.head(self.final_norm(h)) # (B, T, 12)
+        return logits
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Batched forward:
@@ -321,17 +334,7 @@ class MuMambaKWS(nn.Module):
         Returns:
           logits: (B, 12) read at the last token T
         """
-        # Stem
-        h = self.stem(x) # (B, T, D)
-
-        # Layers
-        for layer in self.layers:
-            h = layer(h)
-
-        # Head read at last token
-        h_last = h[:, -1, :] # (B, D)
-        logits = self.head(self.final_norm(h_last))
-        return logits
+        return self.forward_seq(x)[:, -1, :]
 
     def init_streaming_state(self, batch_size: int = 1, device=None, dtype=torch.float32):
         states = []

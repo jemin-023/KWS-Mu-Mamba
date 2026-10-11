@@ -8,9 +8,14 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from train.kws.data import SpeechCommandsDataset, NUM_CLASSES
+from train.kws.data import SpeechCommandsDataset, NUM_CLASSES, collate_sequences
 from train.kws.model import MuMambaKWS, MambaC1Block
-from train.kws.train import evaluate
+from train.kws.train import (
+    sequence_criterion,
+    build_val_sequences,
+    evaluate_val_sequences,
+    evaluate_test_clips,
+)
 
 def quantize_per_row_ste(w: torch.Tensor) -> torch.Tensor:
     """
@@ -19,7 +24,7 @@ def quantize_per_row_ste(w: torch.Tensor) -> torch.Tensor:
     """
     scale = torch.amax(torch.abs(w), dim=-1, keepdim=True).clamp(min=1e-8) / 127.0
     w_scaled = w / scale
-    w_q = torch.clamp(torch.round(w_scaled), -128.0, 127.0)
+    w_q = torch.clamp(torch.round(w_scaled), -127.0, 127.0)
     w_fake = (w_q - w_scaled).detach() + w_scaled
     return w_fake * scale
 
@@ -30,7 +35,7 @@ def quantize_conv_ste(w: torch.Tensor) -> torch.Tensor:
     """
     scale = torch.amax(torch.abs(w), dim=(1, 2), keepdim=True).clamp(min=1e-8) / 127.0
     w_scaled = w / scale
-    w_q = torch.clamp(torch.round(w_scaled), -128.0, 127.0)
+    w_q = torch.clamp(torch.round(w_scaled), -127.0, 127.0)
     w_fake = (w_q - w_scaled).detach() + w_scaled
     return w_fake * scale
 
@@ -106,8 +111,8 @@ def compute_multiplier_and_shift(scale_factor: float, max_shift: int = 24) -> Tu
 def run_qat(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if device.type == "cpu":
-        torch.set_num_threads(8)
-    print(f"Running Quantization-Aware Fine-Tuning (STE W8A16) on: {device}")
+        torch.set_num_threads(12)
+    print(f"Running Quantization-Aware Fine-Tuning (STE W8A16) on: {device} (threads: {torch.get_num_threads()})")
 
     ckpt_path = Path(args.ckpt)
     if not ckpt_path.exists():
@@ -131,64 +136,68 @@ def run_qat(args):
     model.to(device)
 
     print("Evaluating float baseline before QAT...")
-    test_ds = SpeechCommandsDataset(data_dir=args.data_dir, split="test", augment=False)
+    test_ds = SpeechCommandsDataset(data_dir=args.data_dir, split="test", augment=False, mode="clip")
     test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    float_acc, _ = evaluate(model, test_loader, device)
-    print(f"Baseline Float Test Accuracy: {float_acc*100:.2f}%")
+    float_acc = evaluate_test_clips(model, test_loader, device)
+    print(f"Baseline Float Test Accuracy: {float_acc:.2f}%")
 
     # Convert model to QAT modules
     model = convert_to_qat(model)
 
-    train_ds = SpeechCommandsDataset(data_dir=args.data_dir, split="train", augment=True)
-    val_ds = SpeechCommandsDataset(data_dir=args.data_dir, split="validation", augment=False)
-    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    train_ds = SpeechCommandsDataset(data_dir=args.data_dir, split="train", augment=True, mode="sequence")
+    val_ds = SpeechCommandsDataset(data_dir=args.data_dir, split="validation", augment=False, mode="clip")
+    val_seq_items = build_val_sequences(val_ds, num_sequences=200, seed=1337)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr * 0.05)
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.05)
 
-    best_val_acc = 0.0
+    best_val_score = 0.0
     save_path = Path(args.save_dir) / "quant_model.pt"
 
     for epoch in range(1, args.epochs + 1):
-        train_ds.resample_epoch()
-        train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
+        train_ds.resample_epoch(max_samples_per_class=args.max_samples_per_class)
+        train_loader = DataLoader(
+            train_ds,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.workers,
+            collate_fn=collate_sequences,
+        )
 
         model.train()
         pbar = tqdm(train_loader, desc=f"QAT Epoch {epoch}/{args.epochs}")
-        for features, labels in pbar:
+        for features, targets in pbar:
             features = features.to(device)
-            labels = labels.to(device)
+            targets = targets.to(device)
 
             optimizer.zero_grad()
-            logits = model(features)
-            loss = criterion(logits, labels)
+            logits = model.forward_seq(features)
+            loss = sequence_criterion(logits, targets)
             loss.backward()
 
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
         scheduler.step()
-        val_acc, _ = evaluate(model, val_loader, device)
-        print(f"QAT Epoch {epoch:2d}: Val Acc = {val_acc*100:.2f}%")
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
+        mean_score, kw_acc, bg_acc = evaluate_val_sequences(model, val_seq_items, device)
+        print(f"QAT Epoch {epoch:2d}: Val Score = {mean_score*100:.2f}% (KW: {kw_acc*100:.2f}%, BG: {bg_acc*100:.2f}%)")
+        if mean_score > best_val_score:
+            best_val_score = mean_score
             torch.save({
                 "model_state_dict": model.state_dict(),
-                "val_acc": val_acc,
+                "val_score": mean_score,
                 "args": args_dict,
                 "stats": stats,
             }, save_path)
-            print(f"  --> Saved QAT checkpoint to {save_path} (Val Acc: {val_acc*100:.2f}%)")
+            print(f"  --> Saved QAT checkpoint to {save_path} (Val Score: {mean_score*100:.2f}%)")
 
     # Final test evaluation with fake-quantized model
     if save_path.exists():
         ckpt_q = torch.load(save_path, map_location=device, weights_only=False)
         model.load_state_dict(ckpt_q["model_state_dict"])
-    qat_test_acc, _ = evaluate(model, test_loader, device)
-    drop = (float_acc - qat_test_acc) * 100.0
-    print(f"\nFinal QAT Test Accuracy: {qat_test_acc*100:.2f}% (drop from float: {drop:+.2f}%)")
-    # Note: 0.5-pt gate check moved to integer-engine eval_c.py / make gate
+    qat_test_acc = evaluate_test_clips(model, test_loader, device)
+    drop = float_acc - qat_test_acc
+    print(f"\nFinal QAT Test Accuracy: {qat_test_acc:.2f}% (drop from float: {drop:+.2f}%)")
 
 def main():
     parser = argparse.ArgumentParser(description="QAT Fine-tuning for Mu-Mamba")
@@ -199,6 +208,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--max-samples-per-class", type=int, default=200)
     args = parser.parse_args()
     run_qat(args)
 

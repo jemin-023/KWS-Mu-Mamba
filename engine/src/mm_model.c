@@ -234,3 +234,52 @@ int mm_step_q(mm_context_t *ctx, int16_t *features_out, int32_t *logits_out) {
 
     return 1;
 }
+
+#define MM_DECIDE_THRESHOLD_Q12 (6144) /* 1.5 in Q12 */
+#define MM_DECIDE_ALPHA_Q15     (22938) /* 0.7 in Q15 */
+#define MM_DECIDE_REFRACTORY    (25)    /* 25 tokens = 0.5 s */
+
+int mm_decide_ex(mm_context_t *ctx, const int32_t *logits_q12, int32_t threshold_q12, int32_t ema_alpha_q15, int16_t refractory_tokens) {
+    if (!ctx || !logits_q12) return -1;
+
+    /* Margin between each keyword logit and the larger of silence (11) and unknown (10) */
+    int32_t bg_max = logits_q12[MM_CLASS_UNKNOWN] > logits_q12[MM_CLASS_SILENCE]
+                   ? logits_q12[MM_CLASS_UNKNOWN]
+                   : logits_q12[MM_CLASS_SILENCE];
+
+    /* EMA of margins: smoothed = (alpha * smoothed + (32768 - alpha) * margin) >> 15 */
+    int32_t one_minus_alpha = 32768 - ema_alpha_q15;
+    for (int k = 0; k < 10; k++) {
+        int32_t margin = logits_q12[k] - bg_max;
+        int64_t smoothed = ((int64_t)ema_alpha_q15 * ctx->smoothed_probs[k]) +
+                           ((int64_t)one_minus_alpha * margin);
+        ctx->smoothed_probs[k] = (int32_t)(smoothed >> 15);
+    }
+
+    /* Refractory period handling */
+    if (ctx->refractory_timer > 0) {
+        ctx->refractory_timer--;
+        return -1;
+    }
+
+    /* Find best keyword exceeding threshold */
+    int best_kw = -1;
+    int32_t best_margin = threshold_q12;
+    for (int k = 0; k < 10; k++) {
+        if (ctx->smoothed_probs[k] > best_margin) {
+            best_margin = ctx->smoothed_probs[k];
+            best_kw = k;
+        }
+    }
+
+    if (best_kw >= 0) {
+        ctx->refractory_timer = refractory_tokens;
+        return best_kw;
+    }
+
+    return -1;
+}
+
+int mm_decide(mm_context_t *ctx, const int32_t *logits_q12) {
+    return mm_decide_ex(ctx, logits_q12, MM_DECIDE_THRESHOLD_Q12, MM_DECIDE_ALPHA_Q15, MM_DECIDE_REFRACTORY);
+}

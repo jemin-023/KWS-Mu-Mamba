@@ -132,6 +132,10 @@ int32_t mm_rsqrt_q12(uint32_t x);
 int32_t mm_rsqrt_q15(uint32_t x);
 int16_t mm_silu_q15(int16_t x);
 
+/* Continuous streaming decision rule: returns class (0..9) or -1 */
+int mm_decide(mm_context_t *ctx, const int32_t *logits_q12);
+int mm_decide_ex(mm_context_t *ctx, const int32_t *logits_q12, int32_t threshold_q12, int32_t ema_alpha_q15, int16_t refractory_tokens);
+
 const char *mm_weights_id(void);
 
 /* Saturation tracking */
