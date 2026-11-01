@@ -33,15 +33,14 @@ class MMContext(ctypes.Structure):
         ("audio_buf", ctypes.c_int16 * 512),
         ("audio_buf_count", ctypes.c_uint16),
         ("mel_features", ctypes.c_int16 * 40),
-        ("conv_ring_f", ((ctypes.c_float * 64) * 3) * 2),
         ("conv_ring_q", ((ctypes.c_int16 * 64) * 3) * 2),
-        ("conv_ring_idx", ctypes.c_uint8 * 2),
-        ("ssm_h_f", ((ctypes.c_float * 8) * 64) * 2),
         ("ssm_h_q", ((ctypes.c_int32 * 8) * 64) * 2),
         ("logits_q", ctypes.c_int32 * 12),
-        ("logits_f", ctypes.c_float * 12),
-        ("smoothed_probs", ctypes.c_int32 * 12),
+        ("smoothed_margins", ctypes.c_int32 * 12),
         ("refractory_timer", ctypes.c_int16),
+        ("conv_ring_f", ((ctypes.c_float * 64) * 3) * 2),
+        ("ssm_h_f", ((ctypes.c_float * 8) * 64) * 2),
+        ("logits_f", ctypes.c_float * 12),
     ]
 
 def load_c_engine():

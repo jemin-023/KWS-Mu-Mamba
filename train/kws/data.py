@@ -288,13 +288,16 @@ def build_continuous_stream(
     clip_info: Optional[Tuple[Optional[Path], int, Optional[int]]] = None,
     is_training: bool = True,
     rng: Optional[random.Random] = None,
-) -> Tuple[np.ndarray, np.ndarray, List[Tuple[float, float, int]]]:
+    with_targets: bool = True,
+    info: Optional[dict] = None,
+) -> Tuple[np.ndarray, Optional[np.ndarray], List[Tuple[float, float, int]]]:
     """
     Generalized sequence composer for training and streaming evaluation.
     Returns:
       audio: 1D int16 array
-      targets: 1D int64 per-token target array (-100 = ignore)
+      targets: 1D int64 per-token target array (-100 = ignore); None when with_targets is False
       events: list of (start_sec, end_sec, class_idx)
+    If `info` is a dict it is filled with the stream composition (clip counts per kind).
     """
     if rng is None:
         rng = random.Random()
@@ -304,12 +307,17 @@ def build_continuous_stream(
     current_sample = 0
 
     if num_keywords is None:
-        # Single-clip training/validation sequence
-        preroll_s = rng.uniform(0.0, 1.5) if is_training else 0.5
+        # Single-clip training/validation sequence with long background stretches
+        preroll_s = rng.uniform(0.0, 4.0) if is_training else rng.uniform(0.2, 3.0)
         preroll_samples = int(preroll_s * SAMPLE_RATE)
 
-        # Distractor in pre-roll with probability 0.3
-        has_unk = is_training and (rng.random() < 0.3) and len(dataset.unknown_files) > 0
+        # Distractor in pre-roll with probability 0.3 (only if the pre-roll is long enough)
+        has_unk = (
+            is_training
+            and preroll_s >= 1.5
+            and (rng.random() < 0.3)
+            and len(dataset.unknown_files) > 0
+        )
         if has_unk:
             gap1_samples = preroll_samples // 2
             current_sample += gap1_samples
@@ -357,10 +365,57 @@ def build_continuous_stream(
             events.append((current_sample / SAMPLE_RATE, (current_sample + 16000) / SAMPLE_RATE, label))
         current_sample += 16000
 
-        # Post-roll
-        postroll_s = rng.uniform(0.0, 1.0) if is_training else 0.5
-        postroll_samples = int(postroll_s * SAMPLE_RATE)
-        current_sample += postroll_samples
+        # Extra keyword/unknown segments, each preceded by a background gap
+        n_extra = rng.choices([0, 1, 2], weights=[0.3, 0.4, 0.3])[0]
+        for _ in range(n_extra):
+            gap_samples = int(rng.uniform(0.5, 4.0) * SAMPLE_RATE)
+            current_sample += gap_samples
+
+            if rng.random() < 0.5:
+                kw = rng.choice(TARGET_KEYWORDS)
+                files = dataset.keyword_files[kw]
+                if files:
+                    extra_path = rng.choice(files)
+                    extra_label = CLASS_TO_IDX[kw]
+                else:
+                    extra_path = rng.choice(dataset.unknown_files) if dataset.unknown_files else None
+                    extra_label = CLASS_TO_IDX["unknown"]
+            else:
+                if dataset.unknown_files:
+                    extra_path = rng.choice(dataset.unknown_files)
+                    extra_label = CLASS_TO_IDX["unknown"]
+                else:
+                    kw = rng.choice(TARGET_KEYWORDS)
+                    files = dataset.keyword_files[kw]
+                    if files:
+                        extra_path = rng.choice(files)
+                        extra_label = CLASS_TO_IDX[kw]
+                    else:
+                        extra_path = None
+                        extra_label = CLASS_TO_IDX["silence"]
+
+            if extra_path is None:
+                extra_audio = np.zeros(16000, dtype=np.int16)
+            else:
+                try:
+                    extra_audio = read_wav_int16(extra_path)
+                except Exception:
+                    extra_audio = np.zeros(16000, dtype=np.int16)
+
+            if len(extra_audio) < 16000:
+                extra_audio = np.pad(extra_audio, (0, 16000 - len(extra_audio)))
+            else:
+                extra_audio = extra_audio[:16000]
+
+            timeline_clips.append((current_sample, extra_audio, extra_label))
+            if extra_label < 10:
+                events.append((current_sample / SAMPLE_RATE, (current_sample + 16000) / SAMPLE_RATE, extra_label))
+            current_sample += 16000
+
+        # Final background tail
+        tail_s = rng.uniform(0.5, 6.0) if is_training else rng.uniform(1.0, 6.0)
+        tail_samples = int(tail_s * SAMPLE_RATE)
+        current_sample += tail_samples
         total_samples = current_sample
     else:
         # Multi-keyword stream for continuous evaluation
@@ -434,24 +489,38 @@ def build_continuous_stream(
     audio_float = audio_float * gain_linear
     audio = np.clip(audio_float, -32768.0, 32767.0).astype(np.int16)
 
-    # Compute per-token targets
+    if info is not None:
+        n_unknown = sum(1 for _, _, lbl in timeline_clips if lbl == CLASS_TO_IDX["unknown"])
+        info.update({
+            "n_events": len(events),
+            "n_unknown_distractors": n_unknown,
+            "n_clips": len(timeline_clips),
+            "total_seconds": len(audio) / SAMPLE_RATE,
+            "timeline": [(st, lbl) for st, _, lbl in timeline_clips],
+        })
+
+    if not with_targets:
+        return audio, None, events
+
+    # Compute per-token targets (clips are applied in order, so later clips overwrite earlier ones)
     hop = 320
     frame_len = 512
     n_tokens = (len(audio) - frame_len) // hop + 1
     targets = np.full(n_tokens, CLASS_TO_IDX["silence"], dtype=np.int64)
 
     for st_samp, _, clip_label in timeline_clips:
-        for t in range(n_tokens):
-            tok_start = t * hop
-            rel_samp = tok_start - st_samp
-            if 0 <= rel_samp < 16000:
-                rel_tok = rel_samp // hop
-                if rel_tok < 40:
-                    targets[t] = -100
-                else:
-                    targets[t] = clip_label
-            elif 16000 <= rel_samp < 16000 + 4800:
-                targets[t] = -100
+        # tokens whose start t*hop lies in [st, st+16000): first 40 tokens of the clip are ignored
+        lo = max(0, -(-st_samp // hop))
+        hi = min(n_tokens, -(-(st_samp + 16000) // hop))
+        if hi > lo:
+            ts = np.arange(lo, hi)
+            rel_tok = (ts * hop - st_samp) // hop
+            targets[lo:hi] = np.where(rel_tok < 40, -100, clip_label)
+        # then 4800 samples of ignored tail: tokens starting in [st+16000, st+20800)
+        lo2 = max(0, -(-(st_samp + 16000) // hop))
+        hi2 = min(n_tokens, -(-(st_samp + 16000 + 4800) // hop))
+        if hi2 > lo2:
+            targets[lo2:hi2] = -100
 
     return audio, targets, events
 

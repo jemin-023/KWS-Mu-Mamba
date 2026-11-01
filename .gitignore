@@ -1,5 +1,5 @@
-# Data directories
-data/
+# Datasets (downloaded by scripts/download_speech_commands.py) -- root only, so tests/data and paper/data are tracked
+/data/
 *.tar.gz
 *.zip
 
@@ -10,6 +10,7 @@ __pycache__/
 .venv/
 env/
 .pytest_cache/
+.ipynb_checkpoints/
 
 # Build artifacts
 *.o
@@ -17,12 +18,28 @@ env/
 *.so
 build/
 bin/
+.pio/
 firmware/.pio/
 firmware/sdkconfig.*
 !firmware/sdkconfig.defaults
 *.bin
 *.elf
 engine/tests/test_frontend
+
+# LaTeX build output
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.toc
+paper/*.synctex.gz
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.bbl
+paper/*.blg
+
+# Local/agent scratch
+.claude/
+*.local
 
 # Editor & OS files
 .DS_Store

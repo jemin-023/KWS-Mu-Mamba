@@ -23,6 +23,8 @@ class MambaC1Block(nn.Module):
         and Delta = softplus(p), by repeated multiplication P_n = P_{n-1} * q.
       - Conv ring buffer carries state for causal depthwise Conv1d (K=4)
       - Batched forward(seq) and streaming step(token, state)
+    With learned_a=True (ablation only, no C engine) A[d, n] = -exp(A_log[d, n]) is a trained parameter,
+    initialised to -(n + 1) so the model starts out identical to C1, and the decay is exp(Delta * A) per (d, n).
     """
     def __init__(
         self,
@@ -32,8 +34,10 @@ class MambaC1Block(nn.Module):
         dt_rank: int = 4,       # R
         d_conv: int = 4,        # K
         p_clamp_range: float = 12.0,
+        learned_a: bool = False,
     ):
         super().__init__()
+        self.learned_a = learned_a
         self.d_model = d_model
         self.d_inner = d_inner
         self.d_state = d_state
@@ -68,6 +72,11 @@ class MambaC1Block(nn.Module):
         # D_skip: residual skip connection per inner channel (D_i)
         self.D_skip = nn.Parameter(torch.ones(d_inner))
 
+        if learned_a:
+            # S4D-real init: A[d, n] = -(n + 1)
+            a_init = torch.arange(1, d_state + 1, dtype=torch.float32).log()
+            self.A_log = nn.Parameter(a_init.unsqueeze(0).repeat(d_inner, 1))
+
         # Initialize dt_proj bias to put Delta in typical initial range [1e-3, 1e-1]
         self._init_dt()
 
@@ -83,6 +92,16 @@ class MambaC1Block(nn.Module):
             self.dt_proj.bias.copy_(p_init)
             # Small weights for dt_proj
             self.dt_proj.weight.zero_()
+
+    def _decay_powers(self, q: torch.Tensor, Delta: torch.Tensor) -> torch.Tensor:
+        """Per-(d, n) decay P (..., D_i, N): q^(n+1) for C1, exp(Delta * A) for the learned-A ablation."""
+        if self.learned_a:
+            A = -torch.exp(self.A_log)                 # (D_i, N)
+            return torch.exp(Delta.unsqueeze(-1) * A)
+        P_powers = [q]
+        for _ in range(1, self.d_state):
+            P_powers.append(P_powers[-1] * q)
+        return torch.stack(P_powers, dim=-1)
 
     def _c1_scan(
         self,
@@ -112,10 +131,7 @@ class MambaC1Block(nn.Module):
 
         # Precompute decay powers P: (B, T, D_i, N)
         # P[:, :, :, 0] = q, P[:, :, :, n] = P[:, :, :, n-1] * q
-        P_powers = [q]
-        for _ in range(1, self.d_state):
-            P_powers.append(P_powers[-1] * q)
-        P = torch.stack(P_powers, dim=-1)      # (B, T, D_i, N)
+        P = self._decay_powers(q, Delta)       # (B, T, D_i, N)
 
         # Outer product: v (B, T, D_i, 1) * B_val (B, T, 1, N) -> (B, T, D_i, N)
         dB = v.unsqueeze(-1) * B_val.unsqueeze(-2)
@@ -126,11 +142,15 @@ class MambaC1Block(nn.Module):
         else:
             h = h_init.clone()
 
+        P_steps = P.unbind(1)         # tuple of T tensors, (B, D_i, N)
+        dB_steps = dB.unbind(1)       # tuple of T tensors, (B, D_i, N)
+        C_steps = C_val.unbind(1)     # tuple of T tensors, (B, N)
+
         y_list = []
         for t in range(T):
-            P_t = P[:, t]      # (B, D_i, N)
-            dB_t = dB[:, t]    # (B, D_i, N)
-            C_t = C_val[:, t]  # (B, N)
+            P_t = P_steps[t]   # (B, D_i, N)
+            dB_t = dB_steps[t] # (B, D_i, N)
+            C_t = C_steps[t]   # (B, N)
 
             # Recurrence: h = P * h + dB
             h = P_t * h + dB_t
@@ -247,10 +267,7 @@ class MambaC1Block(nn.Module):
         v = Delta * u_prime           # (B, D_inner)
 
         # Repeated multiplication for P
-        P_powers = [q]
-        for _ in range(1, self.d_state):
-            P_powers.append(P_powers[-1] * q)
-        P = torch.stack(P_powers, dim=-1) # (B, D_inner, N)
+        P = self._decay_powers(q, Delta) # (B, D_inner, N)
 
         # Input outer product
         dB = v.unsqueeze(-1) * B_val.unsqueeze(-2) # (B, D_inner, N)
@@ -288,6 +305,7 @@ class MuMambaKWS(nn.Module):
         d_conv: int = 4,
         num_layers: int = 2,
         num_classes: int = 12,
+        learned_a: bool = False,
     ):
         super().__init__()
         self.in_dim = in_dim
@@ -306,6 +324,7 @@ class MuMambaKWS(nn.Module):
                 d_state=d_state,
                 dt_rank=dt_rank,
                 d_conv=d_conv,
+                learned_a=learned_a,
             )
             for _ in range(num_layers)
         ])

@@ -1,12 +1,16 @@
 import argparse
 import hashlib
+import json
+import random
 from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
 from train.kws.model import MuMambaKWS
-from train.kws.data import SpeechCommandsDataset
+from train.kws.data import SpeechCommandsDataset, build_continuous_stream
+from train.kws.frontend import extract_log_mel_c
+from train.kws.export_id import write_export_id
 
 def quantize_row_symmetric(weight_row, max_int=127):
     """Symmetric per-row int8 quantization."""
@@ -21,8 +25,11 @@ def quantize_row_symmetric(weight_row, max_int=127):
 
 def compute_mult_shift(scale):
     """
-    Compute integer multiplier (int16: 1..32767) and shift (uint8: 0..31)
-    such that scale ~= mult * 2^(-shift).
+    Returns (mult, shift) with scale ~= mult * 2**(-shift),
+    shift = clamp(floor(14 - log2(scale)), 0, 31),
+    mult = clamp(round(scale * 2**shift), 1, 32767);
+    so for in-range scales mult lies in [16384, 32767]
+    and the relative rounding error of the multiplier is at most 2**-15.
     """
     if scale <= 0:
         return 0, 0
@@ -32,10 +39,51 @@ def compute_mult_shift(scale):
     mult = max(1, min(32767, mult))
     return mult, shift
 
-def calibrate_formats(model: MuMambaKWS, data_dir: str, margin: float = 2.0):
+def _trace_sites(model: MuMambaKWS, features: torch.Tensor, resids, xprojs, inprojs):
+    """Appends |activation| tensors at the residual, x_proj and in_proj sites for features (B, T, 40)."""
+    h = model.stem(features)
+    resids.append(h.abs().reshape(-1))
+    for layer in model.layers:
+        x_norm = layer.norm(h)
+        xz = layer.in_proj(x_norm)
+        inprojs.append(xz.abs().reshape(-1))
+        u, z = torch.split(xz, [layer.d_inner, layer.d_inner], dim=-1)
+        u_padded = torch.nn.functional.pad(u.transpose(1, 2), (layer.d_conv - 1, 0))
+        u_conv = layer.conv1d(u_padded)
+        u_prime = torch.nn.functional.silu(u_conv.transpose(1, 2))
+        x_ssm = layer.x_proj(u_prime)
+        xprojs.append(x_ssm.abs().reshape(-1))
+
+        dt_rank_val, B_val, C_val = torch.split(x_ssm, [layer.dt_rank, layer.d_state, layer.d_state], dim=-1)
+        p = layer.dt_proj(dt_rank_val)
+        y_scan, _ = layer._c1_scan(u_prime, p, B_val, C_val)
+        y_scan = y_scan + layer.D_skip.view(1, 1, -1) * u_prime
+        y_gate = y_scan * torch.nn.functional.silu(z)
+        out = layer.out_proj(y_gate)
+        h = h + out
+        resids.append(h.abs().reshape(-1))
+
+def _frac_over(values: np.ndarray, q: int) -> float:
+    """Fraction of |values| that does not fit an int16 at Q format q."""
+    return float(np.mean(values > 32767.0 / (2 ** q)))
+
+def _pick_q(values: np.ndarray, percentile: float, margin: float, q_min: int, q_max: int, guard: bool):
+    mag = float(np.percentile(values, percentile))
+    q = int(np.floor(np.log2(32767.0 / (margin * mag))))
+    q = max(q_min, min(q_max, q))
+    # The percentile rule can still leave values over the limit: step to a wider range until none overflow
+    while guard and q > q_min and _frac_over(values, q) > 0.0:
+        q -= 1
+    return q, mag
+
+def calibrate_formats(model: MuMambaKWS, data_dir: str, margin: float = 2.0, num_streams: int = 20,
+                      stream_keywords: int = 40, stream_seed: int = 11, resid_percentile: float = 99.99,
+                      resid_margin: float = 1.25, report: dict | None = None):
     """
-    Runs checkpoint over validation features, takes the 99th percentile magnitude
-    with 2x margin, and computes fractional bits for MM_Q_RESID and MM_Q_XPROJ.
+    Runs the checkpoint over validation clips AND long validation streams (zero state clips alone under-estimate the
+    residual, which grows along a stream) and chooses the fractional bits of MM_Q_RESID, MM_Q_XPROJ, MM_Q_INPROJ.
+    Residual: 99.99th percentile magnitude with a 1.25x margin. x_proj / in_proj: 99th percentile with a 2x margin,
+    widened until no calibration value overflows. `report` (if given) receives the percentiles and overflow fractions.
     """
     val_ds = SpeechCommandsDataset(data_dir=data_dir, split="validation", augment=False)
     loader = DataLoader(val_ds, batch_size=64, shuffle=False)
@@ -46,47 +94,39 @@ def calibrate_formats(model: MuMambaKWS, data_dir: str, margin: float = 2.0):
 
     with torch.no_grad():
         for features, _ in loader:
-            h = model.stem(features)
-            resids.append(h.abs().reshape(-1))
-            for layer in model.layers:
-                x_norm = layer.norm(h)
-                xz = layer.in_proj(x_norm)
-                inprojs.append(xz.abs().reshape(-1))
-                u, z = torch.split(xz, [layer.d_inner, layer.d_inner], dim=-1)
-                u_padded = torch.nn.functional.pad(u.transpose(1, 2), (layer.d_conv - 1, 0))
-                u_conv = layer.conv1d(u_padded)
-                u_prime = torch.nn.functional.silu(u_conv.transpose(1, 2))
-                x_ssm = layer.x_proj(u_prime)
-                xprojs.append(x_ssm.abs().reshape(-1))
-
-                dt_rank_val, B_val, C_val = torch.split(x_ssm, [layer.dt_rank, layer.d_state, layer.d_state], dim=-1)
-                p = layer.dt_proj(dt_rank_val)
-                y_scan, _ = layer._c1_scan(u_prime, p, B_val, C_val)
-                y_scan = y_scan + layer.D_skip.view(1, 1, -1) * u_prime
-                y_gate = y_scan * torch.nn.functional.silu(z)
-                out = layer.out_proj(y_gate)
-                h = h + out
-                resids.append(h.abs().reshape(-1))
+            _trace_sites(model, features, resids, xprojs, inprojs)
+        srng = random.Random(stream_seed)
+        for _ in range(num_streams):
+            audio, _, _ = build_continuous_stream(val_ds, num_keywords=stream_keywords, is_training=False,
+                                                  rng=srng, with_targets=False)
+            mel = extract_log_mel_c(audio, target_frames=(len(audio) - 512) // 320 + 1).astype(np.float32)
+            feats = torch.from_numpy((mel - val_ds.mean) / val_ds.std).unsqueeze(0)
+            _trace_sites(model, feats, resids, xprojs, inprojs)
 
     all_resids = torch.cat(resids).numpy()
     all_xprojs = torch.cat(xprojs).numpy()
     all_inprojs = torch.cat(inprojs).numpy()
 
-    mag_r = float(np.percentile(all_resids, 99.0))
-    mag_x = float(np.percentile(all_xprojs, 99.0))
-    mag_inp = float(np.percentile(all_inprojs, 99.0))
-
-    q_resid = int(np.floor(np.log2(32767.0 / (margin * mag_r))))
-    q_xproj = int(np.floor(np.log2(32767.0 / (margin * mag_x))))
-    q_inproj = int(np.floor(np.log2(32767.0 / (margin * mag_inp))))
-
-    q_resid = max(4, min(12, q_resid))
-    q_xproj = max(8, min(12, q_xproj))
-    q_inproj = max(8, min(12, q_inproj))
-    print(f"Calibrated formats: MM_Q_RESID={q_resid} (mag={mag_r:.2f}), MM_Q_XPROJ={q_xproj} (mag={mag_x:.2f}), MM_Q_INPROJ={q_inproj} (mag={mag_inp:.2f})")
+    q_resid, mag_r = _pick_q(all_resids, resid_percentile, resid_margin, 4, 12, guard=False)
+    q_xproj, mag_x = _pick_q(all_xprojs, 99.0, margin, 8, 12, guard=True)
+    q_inproj, mag_inp = _pick_q(all_inprojs, 99.0, margin, 8, 12, guard=True)
+    print(f"Calibrated formats: MM_Q_RESID={q_resid} (p{resid_percentile}={mag_r:.2f}, x{resid_margin}), "
+          f"MM_Q_XPROJ={q_xproj} (p99={mag_x:.2f}), MM_Q_INPROJ={q_inproj} (p99={mag_inp:.2f})")
+    if report is not None:
+        report.update({
+            "num_streams": num_streams, "stream_keywords": stream_keywords, "stream_seed": stream_seed,
+            "resid": {"q": q_resid, "percentile": resid_percentile, "margin": resid_margin, "magnitude": mag_r,
+                      "max": float(all_resids.max()),
+                      "frac_over_by_q": {str(q): _frac_over(all_resids, q) for q in (5, 6, 7, 8)}},
+            "xproj": {"q": q_xproj, "magnitude": mag_x, "max": float(all_xprojs.max()),
+                      "frac_over": _frac_over(all_xprojs, q_xproj)},
+            "inproj": {"q": q_inproj, "magnitude": mag_inp, "max": float(all_inprojs.max()),
+                       "frac_over": _frac_over(all_inprojs, q_inproj)},
+        })
     return q_resid, q_xproj, q_inproj
 
-def export_model(ckpt_path: Path, out_dir: Path, data_dir: str = "data/speech_commands/v0.02"):
+def export_model(ckpt_path: Path, out_dir: Path, data_dir: str = "data/speech_commands/v0.02",
+                 q_overrides: dict | None = None, calib_json: str | None = None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -142,7 +182,19 @@ def export_model(ckpt_path: Path, out_dir: Path, data_dir: str = "data/speech_co
     print(f"Model: D={model.d_model}, D_inner={model.layers[0].d_inner}, N={model.layers[0].d_state}, L={model.num_layers}")
 
     # Calibrate formats
-    q_resid, q_xproj, q_inproj = calibrate_formats(model, data_dir=data_dir)
+    calib_report = {}
+    q_resid, q_xproj, q_inproj = calibrate_formats(model, data_dir=data_dir, report=calib_report)
+    calib_report["calibrated"] = {"q_resid": q_resid, "q_xproj": q_xproj, "q_inproj": q_inproj}
+    q_overrides = {k: v for k, v in (q_overrides or {}).items() if v is not None}
+    if q_overrides:
+        q_resid = q_overrides.get("q_resid", q_resid)
+        q_xproj = q_overrides.get("q_xproj", q_xproj)
+        q_inproj = q_overrides.get("q_inproj", q_inproj)
+        print(f"Overriding formats: MM_Q_RESID={q_resid}, MM_Q_XPROJ={q_xproj}, MM_Q_INPROJ={q_inproj}")
+    calib_report["used"] = {"q_resid": q_resid, "q_xproj": q_xproj, "q_inproj": q_inproj}
+    if calib_json:
+        with open(calib_json, "w") as cf:
+            json.dump(calib_report, cf, indent=2)
 
     # 2. Fold feature normalization into stem:
     raw_stem_w = model.stem.weight.detach().cpu().numpy() # (32, 40)
@@ -174,6 +226,7 @@ def export_model(ckpt_path: Path, out_dir: Path, data_dir: str = "data/speech_co
     weights_c = out_dir / "mm_weights.c"
     with open(weights_c, "w") as f:
         f.write("/* Auto-generated by export.py - DO NOT EDIT */\n")
+        f.write("#ifdef MM_ENABLE_F32\n")
         f.write('#include "mu_mamba.h"\n')
         f.write('#include "mm_block.h"\n\n')
 
@@ -248,6 +301,7 @@ def export_model(ckpt_path: Path, out_dir: Path, data_dir: str = "data/speech_co
         f.write("    },\n")
         f.write("    .head_b = { " + ", ".join(fmt_f(x) for x in head_b) + " },\n")
         f.write("};\n")
+        f.write("#endif /* MM_ENABLE_F32 */\n")
 
     print(f"Exported {weights_c}")
 
@@ -438,7 +492,6 @@ def export_model(ckpt_path: Path, out_dir: Path, data_dir: str = "data/speech_co
 
     # softplus(p): domain [-16, 16] in Q11 (513 pts, step 128 = 2^7)
     vals_sp = np.log1p(np.exp(pts_q))
-    vals_sp_q11 = np.clip(np.round(vals_sp * 2048.0), 0, 32767).astype(np.int16)
     vals_sp_q24 = np.clip(np.round(vals_sp * (2 ** 24)), 0, 2147483647).astype(np.int32)
 
     with open(luts_c, "w") as f:
@@ -454,24 +507,28 @@ def export_model(ckpt_path: Path, out_dir: Path, data_dir: str = "data/speech_co
             f.write("    " + ", ".join(f"{x:11d}" for x in vals_q_q31[i:i+8]) + ",\n")
         f.write("};\n\n")
 
-        f.write("const int16_t mm_lut_softplus_q11[513] = {\n")
-        for i in range(0, 513, 8):
-            f.write("    " + ", ".join(f"{x:6d}" for x in vals_sp_q11[i:i+8]) + ",\n")
-        f.write("};\n\n")
-
         f.write("const int32_t mm_lut_softplus_q24[513] = {\n")
         for i in range(0, 513, 8):
             f.write("    " + ", ".join(f"{x:11d}" for x in vals_sp_q24[i:i+8]) + ",\n")
         f.write("};\n\n")
     print(f"Exported {luts_c}")
 
+    # 7. Content hash of this export (config + quantised weights + LUTs), written into mm_config.h
+    print(f"MM_EXPORT_ID {write_export_id(out_dir)}")
+
 def main():
     parser = argparse.ArgumentParser(description="Export Mu-Mamba model to C header/sources")
     parser.add_argument("--ckpt", type=str, default="checkpoints/quant_model.pt")
     parser.add_argument("--out-dir", type=str, default="engine/gen")
     parser.add_argument("--data-dir", type=str, default="data/speech_commands/v0.02")
+    parser.add_argument("--q-resid", type=int, default=None, help="Override the calibrated MM_Q_RESID")
+    parser.add_argument("--q-xproj", type=int, default=None, help="Override the calibrated MM_Q_XPROJ")
+    parser.add_argument("--q-inproj", type=int, default=None, help="Override the calibrated MM_Q_INPROJ")
+    parser.add_argument("--calib-json", type=str, default=None, help="Write the calibration statistics here")
     args = parser.parse_args()
-    export_model(Path(args.ckpt), Path(args.out_dir), args.data_dir)
+    export_model(Path(args.ckpt), Path(args.out_dir), args.data_dir,
+                 q_overrides={"q_resid": args.q_resid, "q_xproj": args.q_xproj, "q_inproj": args.q_inproj},
+                 calib_json=args.calib_json)
 
 if __name__ == "__main__":
     main()

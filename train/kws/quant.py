@@ -1,3 +1,9 @@
+"""Weight-only int8 fake-quantisation fine-tuning (QAT with a straight-through estimator).
+
+NOT used for the shipped checkpoint: checkpoints/quant_model.pt is byte-identical to best_model.pt and is quantised
+post-training by train/kws/export.py. The stem is fake-quantised here on its UNFOLDED weights, whereas export.py
+quantises the stem AFTER folding the feature normalisation into it, so this QAT does not model the exported stem.
+"""
 import argparse
 from pathlib import Path
 from typing import Tuple, Dict, Any
@@ -90,23 +96,6 @@ def convert_to_qat(model: MuMambaKWS) -> MuMambaKWS:
         layer.out_proj = _swap_linear(layer.out_proj)
 
     return model
-
-def compute_multiplier_and_shift(scale_factor: float, max_shift: int = 24) -> Tuple[int, int]:
-    """
-    Decomposes a float scale factor S into integer multiplier M and right-shift P
-    such that S ~= M / (2^P), with M in [0, 32767].
-    """
-    if scale_factor <= 0.0:
-        return 0, 0
-    # Find shift such that M is near 16384 (14-bit)
-    shift = 0
-    while scale_factor < 0.5 and shift < max_shift:
-        scale_factor *= 2.0
-        shift += 1
-    mult = int(round(scale_factor * 32768.0))
-    shift += 15
-    mult = max(0, min(32767, mult))
-    return mult, shift
 
 def run_qat(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -205,9 +194,9 @@ def main():
     parser.add_argument("--save-dir", type=str, default="checkpoints")
     parser.add_argument("--data-dir", type=str, default="data/speech_commands/v0.02")
     parser.add_argument("--epochs", type=int, default=5)
-    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=2e-4)
-    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--max-samples-per-class", type=int, default=200)
     args = parser.parse_args()
     run_qat(args)

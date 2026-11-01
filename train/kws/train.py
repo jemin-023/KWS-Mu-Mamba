@@ -5,6 +5,9 @@ import time
 import math
 import random
 import argparse
+import hashlib
+import resource
+import subprocess
 from pathlib import Path
 from typing import List, Tuple
 import numpy as np
@@ -80,15 +83,17 @@ def build_val_sequences(val_dataset: SpeechCommandsDataset, num_sequences: int =
         val_items.append((torch.from_numpy(mel_norm).float(), torch.from_numpy(targets).long()))
     return val_items
 
-def evaluate_val_sequences(model: nn.Module, val_items, device: torch.device):
+def evaluate_val_sequences_detailed(model: nn.Module, val_items, device: torch.device) -> dict:
     model.eval()
     kw_correct, kw_total = 0, 0
     bg_correct, bg_total = 0, 0
+    bg_before_correct, bg_before_total = 0, 0
+    bg_after_correct, bg_after_total = 0, 0
 
     with torch.no_grad():
         for feats, targets in val_items:
-            feats = feats.unsqueeze(0).to(device)
-            targets = targets.to(device)
+            feats = feats.unsqueeze(0).to(device, non_blocking=(device.type == "cuda"))
+            targets = targets.to(device, non_blocking=(device.type == "cuda"))
             logits = model.forward_seq(feats).squeeze(0) # (T, 12)
             preds = logits.argmax(dim=-1)
 
@@ -102,8 +107,33 @@ def evaluate_val_sequences(model: nn.Module, val_items, device: torch.device):
                 bg_correct += (preds[bg_mask] == targets[bg_mask]).sum().item()
                 bg_total += bg_mask.sum().item()
 
-    kw_acc = kw_correct / max(1, kw_total)
-    bg_acc = bg_correct / max(1, bg_total)
+            ignored = (targets == -100).nonzero(as_tuple=True)[0]
+            first_ignored = ignored[0].item() if ignored.numel() > 0 else targets.numel()
+            tok_pos = torch.arange(targets.numel(), device=device)
+            before_mask = bg_mask & (tok_pos < first_ignored)
+            after_mask = bg_mask & (tok_pos > first_ignored)
+            if before_mask.any():
+                bg_before_correct += (preds[before_mask] == targets[before_mask]).sum().item()
+                bg_before_total += before_mask.sum().item()
+            if after_mask.any():
+                bg_after_correct += (preds[after_mask] == targets[after_mask]).sum().item()
+                bg_after_total += after_mask.sum().item()
+
+    return {
+        "kw_acc": kw_correct / max(1, kw_total),
+        "bg_acc": bg_correct / max(1, bg_total),
+        "bg_acc_before_first_clip": bg_before_correct / max(1, bg_before_total),
+        "bg_acc_after_first_clip": bg_after_correct / max(1, bg_after_total),
+        "kw_total": kw_total,
+        "bg_total": bg_total,
+        "bg_before_total": bg_before_total,
+        "bg_after_total": bg_after_total,
+    }
+
+def evaluate_val_sequences(model: nn.Module, val_items, device: torch.device):
+    metrics = evaluate_val_sequences_detailed(model, val_items, device)
+    kw_acc = metrics["kw_acc"]
+    bg_acc = metrics["bg_acc"]
     mean_acc = (kw_acc + bg_acc) / 2.0
     return mean_acc, kw_acc, bg_acc
 
@@ -113,8 +143,8 @@ def evaluate_test_clips(model: nn.Module, test_loader: DataLoader, device: torch
     correct, total = 0, 0
     with torch.no_grad():
         for features, labels in test_loader:
-            features = features.to(device)
-            labels = labels.to(device)
+            features = features.to(device, non_blocking=(device.type == "cuda"))
+            labels = labels.to(device, non_blocking=(device.type == "cuda"))
             logits = model(features)
             preds = logits.argmax(dim=-1)
             correct += (preds == labels).sum().item()
@@ -132,10 +162,26 @@ def train(args):
     np.random.seed(args.seed)
     random.seed(args.seed)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    requested = getattr(args, "device", "auto")
+    if requested == "auto":
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    elif requested == "cuda":
+        if not torch.cuda.is_available():
+            print("Error: --device cuda requested but CUDA is not available (torch.cuda.is_available() is False).", file=sys.stderr)
+            sys.exit(2)
+        device = torch.device("cuda")
+    else:  # cpu
+        device = torch.device("cpu")
+    use_cuda = device.type == "cuda"
+    pin_memory = use_cuda
+    non_blocking = use_cuda
     if device.type == "cpu":
-        torch.set_num_threads(12)
+        torch.set_num_threads(getattr(args, "num_threads", 4))
     print(f"Training on device: {device} (threads: {torch.get_num_threads()})")
+    if use_cuda:
+        gpu_name = torch.cuda.get_device_name(0)
+        total_vram = torch.cuda.get_device_properties(0).total_memory
+        print(f"GPU: {gpu_name} (total VRAM: {total_vram / (1024 ** 2):.0f} MiB)")
 
     save_dir = Path(args.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -161,7 +207,8 @@ def train(args):
     )
 
     val_seq_items = build_val_sequences(val_dataset_clips, num_sequences=300, seed=1337)
-    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False, num_workers=args.workers)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False, num_workers=args.workers,
+                             pin_memory=pin_memory)
 
     # Initialize model S (D=32, L=2, N=8, R=4, K=4)
     model = MuMambaKWS(
@@ -173,17 +220,23 @@ def train(args):
         d_conv=args.d_conv,
         num_layers=args.num_layers,
         num_classes=NUM_CLASSES,
+        learned_a=getattr(args, "learned_a", False),
     ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Model parameters: {total_params:,} (Mu-Mamba size S)")
 
-    # If checkpoint exists, fine-tune from it for fast convergence
-    init_ckpt = Path("checkpoints/quant_model.pt")
-    if init_ckpt.exists():
+    # Optional warm start (--init-ckpt); without it training is from scratch
+    init_ckpt = Path(args.init_ckpt) if args.init_ckpt else None
+    if init_ckpt is not None:
+        if not init_ckpt.exists():
+            raise FileNotFoundError(f"--init-ckpt {init_ckpt} does not exist")
         print(f"Warm-starting from {init_ckpt}...")
         ckpt = torch.load(init_ckpt, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model_state_dict"])
+    else:
+        print("Training FROM SCRATCH (no --init-ckpt).")
+    git_state = _git_state()
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     ema = WeightEMA(model, decay=0.999)
@@ -205,6 +258,7 @@ def train(args):
             shuffle=True,
             num_workers=args.workers,
             collate_fn=collate_sequences,
+            pin_memory=pin_memory,
         )
 
         model.train()
@@ -214,8 +268,8 @@ def train(args):
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch:2d}/{args.epochs}")
         for features, targets in pbar:
-            features = features.to(device)
-            targets = targets.to(device)
+            features = features.to(device, non_blocking=non_blocking)
+            targets = targets.to(device, non_blocking=non_blocking)
 
             optimizer.zero_grad()
             logits = model.forward_seq(features)
@@ -236,10 +290,22 @@ def train(args):
         # Evaluate EMA model on validation sequences
         eval_model = copy.deepcopy(model)
         ema.apply_to(eval_model)
-        mean_score, kw_acc, bg_acc = evaluate_val_sequences(eval_model, val_seq_items, device)
+        metrics = evaluate_val_sequences_detailed(eval_model, val_seq_items, device)
+        kw_acc = metrics["kw_acc"]
+        bg_acc = metrics["bg_acc"]
+        bg_before = metrics["bg_acc_before_first_clip"]
+        bg_after = metrics["bg_acc_after_first_clip"]
+        mean_score = (kw_acc + bg_acc) / 2.0
 
         print(f"Epoch {epoch:2d} ({epoch_time:.1f}s) | Loss: {avg_loss:.4f} | "
-              f"Val Score: {mean_score*100:.2f}% (KW: {kw_acc*100:.2f}%, BG: {bg_acc*100:.2f}%)")
+              f"Val Score: {mean_score*100:.2f}% (KW: {kw_acc*100:.2f}%, BG: {bg_acc*100:.2f}%, "
+              f"BG-before: {bg_before*100:.2f}%, BG-after: {bg_after*100:.2f}%)")
+        if use_cuda:
+            peak_mib = torch.cuda.max_memory_allocated() / (1024 ** 2)
+            print(f"Peak CUDA memory: {peak_mib:.0f} MiB")
+        else:
+            peak_rss_mib = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+            print(f"Peak RSS: {peak_rss_mib:.0f} MiB")
 
         if mean_score > best_val_score:
             best_val_score = mean_score
@@ -249,7 +315,11 @@ def train(args):
                 "val_score": mean_score,
                 "kw_acc": kw_acc,
                 "bg_acc": bg_acc,
+                "bg_acc_before_first_clip": bg_before,
+                "bg_acc_after_first_clip": bg_after,
                 "args": vars(args),
+                "init_ckpt": str(init_ckpt) if init_ckpt is not None else None,
+                **git_state,  # git_commit, git_dirty, git_diff_sha256 (provenance only)
                 "stats": {
                     "mean": torch.as_tensor(train_dataset.mean).float(),
                     "std": torch.as_tensor(train_dataset.std).float(),
@@ -267,18 +337,42 @@ def train(args):
     print(f"Final Test Clip Accuracy: {test_clip_acc:.2f}%")
     return test_clip_acc
 
+def _git_state() -> dict:
+    """Checkpoint provenance: HEAD commit, whether the tree differs from it (untracked files count), and the sha256 of
+    `git diff HEAD` (tracked changes only)."""
+    root = Path(__file__).resolve().parent
+    def run(*cmd):
+        return subprocess.run(["git", *cmd], capture_output=True, check=True, cwd=root).stdout
+    try:
+        diff = run("diff", "HEAD")
+        return {
+            "git_commit": run("rev-parse", "HEAD").decode().strip(),
+            "git_dirty": bool(run("status", "--porcelain").strip()),
+            "git_diff_sha256": hashlib.sha256(diff).hexdigest(),
+        }
+    except Exception:
+        return {"git_commit": "unknown", "git_dirty": None, "git_diff_sha256": None}
+
 def main():
     parser = argparse.ArgumentParser(description="Retrain Streaming Mu-Mamba KWS model")
     parser.add_argument("--data-dir", type=str, default="data/speech_commands/v0.02")
     parser.add_argument("--save-dir", type=str, default="checkpoints")
     parser.add_argument("--epochs", type=int, default=60)
     parser.add_argument("--warmup-epochs", type=int, default=2)
-    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--batch-size", type=int, default=16,
+                        help="Default 16 (reduced from 64: batch 64 with ~1000-token sequences exhausted RAM).")
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
-    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--workers", type=int, default=2,
+                        help="Default 2 (reduced from 4: batch 64 with ~1000-token sequences exhausted RAM).")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-samples-per-class", type=int, default=160)
+    parser.add_argument("--init-ckpt", type=str, default=None,
+                        help="Checkpoint to warm-start from. Default: none (train from scratch).")
+    parser.add_argument("--device", type=str, choices=["auto", "cpu", "cuda"], default="auto",
+                        help="auto: cuda when torch.cuda.is_available() else cpu.")
+    parser.add_argument("--num-threads", type=int, default=4,
+                        help="torch.set_num_threads on CPU.")
 
     # Architecture hyperparameters
     parser.add_argument("--d-model", type=int, default=32)
@@ -287,6 +381,10 @@ def main():
     parser.add_argument("--dt-rank", type=int, default=4)
     parser.add_argument("--d-conv", type=int, default=4)
     parser.add_argument("--num-layers", type=int, default=2)
+    parser.add_argument("--learned-a", action="store_true",
+                        help="Ablation: learn A = -exp(A_log) per (d, n) (init -(n+1)) and decay with exp(Delta*A) "
+                             "instead of the frozen C1 powers. PyTorch only; there is no C engine for it. Note: AdamW weight "
+                             "decay (--weight-decay, 1e-4) is applied to A_log like every other parameter.")
 
     args = parser.parse_args()
     train(args)
