@@ -1,0 +1,98 @@
+{
+  "rule": "Validation only. Primary: fixed-engine detection on the 2,000-keyword VALIDATION stream at the budget tuner's setting (fa_per_background_hour <= 100; alpha, refractory, threshold from the grid). If the candidates are within 1.0 pt, pick the one with higher fixed-engine VALIDATION clip accuracy. Test numbers below are reported, not used for the choice.",
+  "candidates": {
+    "warm400": {
+      "checkpoint": "~/.cache/kws-final/warm_ckpt/best_model.pt",
+      "validation": {
+        "clip_accuracy_fixed_pct": 90.0742741390952,
+        "stream_detection_pct": 66.7,
+        "stream_fa_per_background_hour": 94.51879510460245,
+        "budget_reachable": true,
+        "setting": {
+          "ema_alpha": 0.93,
+          "refractory_tokens": 75,
+          "threshold": 2.25
+        }
+      },
+      "test_reported_not_used": {
+        "clip_accuracy_fixed_pct": 89.34560327198365,
+        "clip_accuracy_float_pct": 89.32515337423312,
+        "top1_agreement_pct": 99.34560327198363,
+        "gate_passed": true,
+        "stream_detection_pct": 73.3,
+        "stream_fa_per_background_hour": 41.361791197141784,
+        "stream_fa_wrong_class_per_background_hour": 34.25273333513304,
+        "stream_fa_outside_per_background_hour": 7.1090578620087435
+      },
+      "residual_format": {
+        "chosen_q_resid": 6,
+        "calibrated": {
+          "q_resid": 6,
+          "q_xproj": 10,
+          "q_inproj": 11
+        },
+        "note": "chosen by the full test gate as in Part 3 C1; this selects the residual format only, not the model"
+      }
+    },
+    "warm800": {
+      "checkpoint": "~/.cache/kws-final/warm800_ckpt/best_model.pt",
+      "validation": {
+        "clip_accuracy_fixed_pct": 89.21899617375647,
+        "stream_detection_pct": 78.10000000000001,
+        "stream_fa_per_background_hour": 95.80476510602561,
+        "budget_reachable": true,
+        "setting": {
+          "ema_alpha": 0.93,
+          "refractory_tokens": 75,
+          "threshold": 1.5
+        }
+      },
+      "test_reported_not_used": {
+        "clip_accuracy_fixed_pct": 89.03885480572598,
+        "clip_accuracy_float_pct": 89.14110429447852,
+        "top1_agreement_pct": 99.59100204498978,
+        "gate_passed": true,
+        "stream_detection_pct": 80.05,
+        "stream_fa_per_background_hour": 45.23945912187382,
+        "stream_fa_wrong_class_per_background_hour": 36.191567297499056,
+        "stream_fa_outside_per_background_hour": 9.047891824374764
+      },
+      "residual_format": {
+        "chosen_q_resid": 7,
+        "calibrated": {
+          "q_resid": 6,
+          "q_xproj": 10,
+          "q_inproj": 11
+        },
+        "note": "chosen by the full test gate as in Part 3 C1; this selects the residual format only, not the model"
+      }
+    }
+  },
+  "validation_detection_difference_pt": 11.400000000000006,
+  "selected": "warm800",
+  "decided_by": "primary criterion (difference > 1.0 pt)",
+  "selected_checkpoint_copy": "checkpoints/paper_model.pt",
+  "final_export": {
+    "note": "The selection above compared the exports of the selection pipeline (warm800 residual Q7, warm400 residual Q6, both chosen by test accuracy at that time). The selected model was then re-exported with the residual format chosen on VALIDATION (paper/data/resid_format_choice.json) and re-tuned on an extended grid; the model choice does not depend on these.",
+    "checkpoint": "checkpoints/paper_model.pt",
+    "weights_id": "2f4bdc556afab73f",
+    "export_id": "6a9a3c92",
+    "q_resid": 5,
+    "validation_clip_accuracy_fixed_pct": 89.24150348863381,
+    "validation_stream_detection_pct": 78.05,
+    "validation_fa_per_background_hour": 94.51879510460245,
+    "setting": {
+      "ema_alpha": 0.93,
+      "refractory_tokens": 75,
+      "threshold": 1.5
+    },
+    "tuning_grid": "alpha {0.85,0.93,0.96,0.98} x refractory {50,75,100,150} x 40 thresholds (640 settings); chosen setting unchanged vs the narrower grid",
+    "test_clip_accuracy_fixed_pct": 89.01840490797545,
+    "test_stream_detection_pct": 79.85,
+    "test_stream_fa_per_background_hour": 47.17829308423985,
+    "test_stream_fa_per_background_hour_ci95": [
+      36.98025065056913,
+      59.319620464946034
+    ]
+  }
+}

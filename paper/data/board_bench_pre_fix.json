@@ -1,0 +1,28 @@
+{
+  "_provenance": "ESP32-C3 DevKitM-1 @160 MHz, ESP-IDF via PlatformIO, firmware built from working tree on 2026-10-11 (weights 3e3052cf5abd9675). Raw logs: board_*.txt in this folder. NOT re-measured on 2026-10-30 (board not connected). Re-measure in QA.",
+  "cpu_freq_hz": 160000000,
+  "fixed": {
+    "ctx_bytes": 6072,
+    "frontend_cycles_median": 130325,
+    "step_cycles_min": 650029,
+    "step_cycles_median": 652719,
+    "step_cycles_max": 655703,
+    "step_stack_used_bytes": 3680,
+    "heap_alloc_during_inference_bytes": 0,
+    "free_heap_before": 300500,
+    "free_heap_after": 300500,
+    "flash_used_bytes": 204808,
+    "firmware_bin_bytes": 219200
+  },
+  "float_softfloat_same_model": {
+    "ctx_bytes": 11752,
+    "step_f32_cycles_median": 7238681,
+    "frontend_cycles_median": 128984
+  },
+  "softfloat_micro": {
+    "expf_cycles_per_call": 2831,
+    "float_mac_cycles": 227,
+    "int8xint16_mac_cycles": 9.0
+  },
+  "device_vs_host_bit_identity": {"tokens": 10000, "bit_identical": 10000, "clips": 200}
+}

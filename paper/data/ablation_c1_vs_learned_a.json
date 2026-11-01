@@ -1,0 +1,551 @@
+{
+  "note": "PyTorch only (no C engine for learned A). Identical recipe per seed (stream-from-scratch, 60 epochs, 160 samples/class, batch 16, AdamW wd 1e-4 incl. A_log); test clips use the zero-state 50-token last-token protocol; validation sequences are the 300 seeded sequences used for checkpoint selection.",
+  "evaluated_with_torch": "2.14.1+cu130",
+  "pairs": {
+    "seed42": {
+      "c1": {
+        "checkpoint": "checkpoints/stream_model.pt",
+        "sha256_16": "74f3af31213ccc3d",
+        "parameters": 18060,
+        "best_epoch": 47,
+        "learned_a": false,
+        "init_ckpt": null,
+        "git_commit": "5c4020a2a350d5deeeaeeb3e65978fba82e1c6dd",
+        "seed": 42,
+        "test_clip": {
+          "correct": 3886,
+          "total": 4890,
+          "accuracy_pct": 79.4683026584867,
+          "wilson_ci": [
+            78.31323172829237,
+            80.57711084309322
+          ]
+        },
+        "validation_sequences": {
+          "kw_acc": 0.7919732441471572,
+          "bg_acc": 0.9697052856484794,
+          "bg_acc_before_first_clip": 0.9375234756479279,
+          "bg_acc_after_first_clip": 0.9795824260279237,
+          "kw_total": 5980,
+          "bg_total": 102031,
+          "bg_before_total": 23961,
+          "bg_after_total": 78070
+        }
+      },
+      "learned_a": {
+        "checkpoint": "/home/Jemin/.cache/kws-final/learned_a_ckpt/best_model.pt",
+        "sha256_16": "f382abae018d2c9d",
+        "parameters": 19084,
+        "best_epoch": 56,
+        "learned_a": true,
+        "init_ckpt": null,
+        "git_commit": "5c4020a2a350d5deeeaeeb3e65978fba82e1c6dd",
+        "seed": 42,
+        "test_clip": {
+          "correct": 4060,
+          "total": 4890,
+          "accuracy_pct": 83.02658486707567,
+          "wilson_ci": [
+            81.94858167327794,
+            84.05273911283429
+          ]
+        },
+        "validation_sequences": {
+          "kw_acc": 0.8252508361204013,
+          "bg_acc": 0.9770755946722075,
+          "bg_acc_before_first_clip": 0.9911940236217186,
+          "bg_acc_after_first_clip": 0.9727424106571027,
+          "kw_total": 5980,
+          "bg_total": 102031,
+          "bg_before_total": 23961,
+          "bg_after_total": 78070
+        },
+        "learned_abs_A_per_n": {
+          "c1_value": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "mean": [
+            1.0188449621200562,
+            1.9067691564559937,
+            2.8814711570739746,
+            3.7617712020874023,
+            4.850639343261719,
+            5.686626434326172,
+            6.620137691497803,
+            7.767611503601074
+          ],
+          "std": [
+            0.1393054723739624,
+            0.2737623155117035,
+            0.31641918420791626,
+            0.40235191583633423,
+            0.7118762135505676,
+            0.6522026062011719,
+            0.7607021331787109,
+            0.9697909355163574
+          ],
+          "min": [
+            0.6594153046607971,
+            1.2648183107376099,
+            1.9990259408950806,
+            2.7518792152404785,
+            3.4372105598449707,
+            4.084898471832275,
+            4.806254863739014,
+            5.419610023498535
+          ],
+          "max": [
+            1.4043152332305908,
+            2.878199815750122,
+            3.9185631275177,
+            4.992842197418213,
+            6.687957286834717,
+            7.564774990081787,
+            8.49744701385498,
+            12.43814754486084
+          ]
+        }
+      },
+      "trained_with": "2.14.1+cu130 (RTX 4050, local)",
+      "difference_pt": 3.558282208588963
+    },
+    "seed1": {
+      "c1": {
+        "checkpoint": "/home/Jemin/.cache/kws-final/c1_seed1_ckpt/best_model.pt",
+        "sha256_16": "5dd8e0b1c4bc30b7",
+        "parameters": 18060,
+        "best_epoch": 28,
+        "learned_a": false,
+        "init_ckpt": null,
+        "git_commit": "5c4020a2a350d5deeeaeeb3e65978fba82e1c6dd",
+        "seed": 1,
+        "test_clip": {
+          "correct": 3560,
+          "total": 4890,
+          "accuracy_pct": 72.80163599182005,
+          "wilson_ci": [
+            71.53690017390244,
+            74.030575167593
+          ]
+        },
+        "validation_sequences": {
+          "kw_acc": 0.7474916387959866,
+          "bg_acc": 0.9701267261910596,
+          "bg_acc_before_first_clip": 0.9764200158591044,
+          "bg_acc_after_first_clip": 0.9681952094274369,
+          "kw_total": 5980,
+          "bg_total": 102031,
+          "bg_before_total": 23961,
+          "bg_after_total": 78070
+        }
+      },
+      "learned_a": {
+        "checkpoint": "/home/Jemin/.cache/kws-final/learned_a_seed1_ckpt/best_model.pt",
+        "sha256_16": "2ae13b8c8b9556c4",
+        "parameters": 19084,
+        "best_epoch": 34,
+        "learned_a": true,
+        "init_ckpt": null,
+        "git_commit": "5c4020a2a350d5deeeaeeb3e65978fba82e1c6dd",
+        "seed": 1,
+        "test_clip": {
+          "correct": 3851,
+          "total": 4890,
+          "accuracy_pct": 78.75255623721881,
+          "wilson_ci": [
+            77.58370062625237,
+            79.87627276401005
+          ]
+        },
+        "validation_sequences": {
+          "kw_acc": 0.790133779264214,
+          "bg_acc": 0.9700385177054033,
+          "bg_acc_before_first_clip": 0.9826801886398732,
+          "bg_acc_after_first_clip": 0.9661585756372486,
+          "kw_total": 5980,
+          "bg_total": 102031,
+          "bg_before_total": 23961,
+          "bg_after_total": 78070
+        },
+        "learned_abs_A_per_n": {
+          "c1_value": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "mean": [
+            1.0090632438659668,
+            1.9223475456237793,
+            2.8008599281311035,
+            3.7554759979248047,
+            4.843751907348633,
+            5.709931373596191,
+            6.846214294433594,
+            7.871519088745117
+          ],
+          "std": [
+            0.11076720058917999,
+            0.2458665519952774,
+            0.3237324357032776,
+            0.42057693004608154,
+            0.4389963150024414,
+            0.6123465895652771,
+            0.8212924003601074,
+            0.9830698370933533
+          ],
+          "min": [
+            0.7456954121589661,
+            1.5141924619674683,
+            1.6564915180206299,
+            2.5251362323760986,
+            3.5143308639526367,
+            4.253594398498535,
+            4.709808349609375,
+            5.109494686126709
+          ],
+          "max": [
+            1.2671706676483154,
+            3.2942187786102295,
+            3.7551910877227783,
+            5.22985315322876,
+            6.213188648223877,
+            7.298222541809082,
+            10.6503267288208,
+            11.035510063171387
+          ]
+        }
+      },
+      "trained_with": "2.14.1+cu130 (RTX 4050, local)",
+      "difference_pt": 5.950920245398763
+    },
+    "seed2": {
+      "c1": {
+        "checkpoint": "/home/Jemin/.cache/kws-final/c1_seed2_ckpt/best_model.pt",
+        "sha256_16": "5d5037a5444c9469",
+        "parameters": 18060,
+        "best_epoch": 39,
+        "learned_a": false,
+        "init_ckpt": null,
+        "git_commit": "unknown",
+        "seed": 2,
+        "test_clip": {
+          "correct": 3944,
+          "total": 4890,
+          "accuracy_pct": 80.65439672801637,
+          "wilson_ci": [
+            79.52337685218595,
+            81.73729179077519
+          ]
+        },
+        "validation_sequences": {
+          "kw_acc": 0.7963210702341137,
+          "bg_acc": 0.911291666258294,
+          "bg_acc_before_first_clip": 0.8395726388714995,
+          "bg_acc_after_first_clip": 0.9333034456257205,
+          "kw_total": 5980,
+          "bg_total": 102031,
+          "bg_before_total": 23961,
+          "bg_after_total": 78070
+        }
+      },
+      "learned_a": {
+        "checkpoint": "/home/Jemin/.cache/kws-final/learned_a_seed2_ckpt/best_model.pt",
+        "sha256_16": "834069e22d0a0fe3",
+        "parameters": 19084,
+        "best_epoch": 47,
+        "learned_a": true,
+        "init_ckpt": null,
+        "git_commit": "unknown",
+        "seed": 2,
+        "test_clip": {
+          "correct": 4035,
+          "total": 4890,
+          "accuracy_pct": 82.51533742331289,
+          "wilson_ci": [
+            81.42531838521715,
+            83.55431012866423
+          ]
+        },
+        "validation_sequences": {
+          "kw_acc": 0.8193979933110368,
+          "bg_acc": 0.9508286697180268,
+          "bg_acc_before_first_clip": 0.9375234756479279,
+          "bg_acc_after_first_clip": 0.9549122582297938,
+          "kw_total": 5980,
+          "bg_total": 102031,
+          "bg_before_total": 23961,
+          "bg_after_total": 78070
+        },
+        "learned_abs_A_per_n": {
+          "c1_value": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "mean": [
+            1.0101804733276367,
+            1.9754838943481445,
+            2.906343460083008,
+            3.767763137817383,
+            4.677424430847168,
+            5.7077202796936035,
+            6.783452987670898,
+            7.848356246948242
+          ],
+          "std": [
+            0.13264714181423187,
+            0.2986563742160797,
+            0.3579882085323334,
+            0.5623020529747009,
+            0.7855863571166992,
+            0.7028045058250427,
+            0.9011666178703308,
+            1.2843128442764282
+          ],
+          "min": [
+            0.7320486307144165,
+            1.2469912767410278,
+            2.027827501296997,
+            2.450324058532715,
+            2.6761860847473145,
+            3.77224063873291,
+            4.283604145050049,
+            4.306984901428223
+          ],
+          "max": [
+            1.4938476085662842,
+            2.8948090076446533,
+            3.837550640106201,
+            5.214235305786133,
+            7.21470832824707,
+            8.122742652893066,
+            9.38561725616455,
+            11.103299140930176
+          ]
+        }
+      },
+      "trained_with": "2.11.0+cu128 (Tesla T4, remote notebook VM)",
+      "difference_pt": 1.8609406952965202
+    }
+  },
+  "summary": {
+    "c1_test_clip_accuracy_pct": {
+      "n": 3,
+      "mean": 77.64144512610771,
+      "sd": 4.233145299619899,
+      "values": [
+        79.4683026584867,
+        72.80163599182005,
+        80.65439672801637
+      ]
+    },
+    "learned_a_test_clip_accuracy_pct": {
+      "n": 3,
+      "mean": 81.43149284253577,
+      "sd": 2.334067155989504,
+      "values": [
+        83.02658486707567,
+        78.75255623721881,
+        82.51533742331289
+      ]
+    },
+    "paired_difference_pt": {
+      "n": 3,
+      "mean": 3.790047716428082,
+      "sd": 2.0548162005472848,
+      "values": [
+        3.558282208588963,
+        5.950920245398763,
+        1.8609406952965202
+      ]
+    },
+    "paired_ttest_learned_minus_c1": {
+      "t": 3.1947164939693486,
+      "p_two_sided": 0.0855881544407405,
+      "df": 2,
+      "n_pairs": 3,
+      "note": "seeds are few; reported as descriptive support, not as a confirmed effect"
+    }
+  },
+  "streaming_pytorch": {
+    "num_keywords": 500,
+    "alpha": 0.85,
+    "refractory": 50,
+    "fa_budget_per_background_hour": 100.0,
+    "val_hours": 0.5344930555555556,
+    "test_hours": 0.5350693402777777,
+    "seed42/c1": {
+      "budget_reachable": true,
+      "threshold": 2.0,
+      "validation": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 2.0,
+        "det": 52.6,
+        "fa_bg_h": 78.36115645900257,
+        "dup": 0,
+        "wrong": 27,
+        "outside": 4
+      },
+      "test": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 2.0,
+        "det": 57.599999999999994,
+        "fa_bg_h": 70.6748652081153,
+        "dup": 0,
+        "wrong": 27,
+        "outside": 1,
+        "fa_wrong_class_per_background_hour": 68.15076287925405,
+        "fa_outside_per_background_hour": 2.524102328861261
+      }
+    },
+    "seed42/learned_a": {
+      "budget_reachable": true,
+      "threshold": 2.0,
+      "validation": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 2.0,
+        "det": 51.6,
+        "fa_bg_h": 98.58339038390646,
+        "dup": 0,
+        "wrong": 34,
+        "outside": 5
+      },
+      "test": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 2.0,
+        "det": 58.4,
+        "fa_bg_h": 50.48204657722522,
+        "dup": 0,
+        "wrong": 20,
+        "outside": 0,
+        "fa_wrong_class_per_background_hour": 50.48204657722522,
+        "fa_outside_per_background_hour": 0.0
+      }
+    },
+    "seed1/c1": {
+      "budget_reachable": true,
+      "threshold": 0.75,
+      "validation": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 0.75,
+        "det": 41.0,
+        "fa_bg_h": 85.94449418084153,
+        "dup": 0,
+        "wrong": 29,
+        "outside": 5
+      },
+      "test": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 0.75,
+        "det": 49.8,
+        "fa_bg_h": 123.68101411420179,
+        "dup": 0,
+        "wrong": 47,
+        "outside": 2,
+        "fa_wrong_class_per_background_hour": 118.63280945647927,
+        "fa_outside_per_background_hour": 5.048204657722522
+      }
+    },
+    "seed1/learned_a": {
+      "budget_reachable": true,
+      "threshold": 0.5,
+      "validation": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 0.5,
+        "det": 63.0,
+        "fa_bg_h": 93.52783190268049,
+        "dup": 0,
+        "wrong": 33,
+        "outside": 4
+      },
+      "test": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 0.5,
+        "det": 57.4,
+        "fa_bg_h": 128.7292187719243,
+        "dup": 0,
+        "wrong": 49,
+        "outside": 2,
+        "fa_wrong_class_per_background_hour": 123.68101411420179,
+        "fa_outside_per_background_hour": 5.048204657722522
+      }
+    },
+    "seed2/c1": {
+      "budget_reachable": true,
+      "threshold": 2.0,
+      "validation": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 2.0,
+        "det": 61.6,
+        "fa_bg_h": 91.0000526620675,
+        "dup": 0,
+        "wrong": 33,
+        "outside": 3
+      },
+      "test": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 2.0,
+        "det": 62.6,
+        "fa_bg_h": 83.29537685242161,
+        "dup": 0,
+        "wrong": 31,
+        "outside": 2,
+        "fa_wrong_class_per_background_hour": 78.24717219469909,
+        "fa_outside_per_background_hour": 5.048204657722522
+      }
+    },
+    "seed2/learned_a": {
+      "budget_reachable": true,
+      "threshold": 1.0,
+      "validation": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 1.0,
+        "det": 67.2,
+        "fa_bg_h": 93.52783190268049,
+        "dup": 0,
+        "wrong": 33,
+        "outside": 4
+      },
+      "test": {
+        "alpha": 0.85,
+        "refractory": 50,
+        "threshold": 1.0,
+        "det": 69.8,
+        "fa_bg_h": 133.77742342964683,
+        "dup": 0,
+        "wrong": 46,
+        "outside": 7,
+        "fa_wrong_class_per_background_hour": 116.108707127618,
+        "fa_outside_per_background_hour": 17.668716302028827
+      }
+    }
+  }
+}

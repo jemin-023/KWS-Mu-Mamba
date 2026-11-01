@@ -1,0 +1,141 @@
+{
+  "run_parameters": {
+    "engine": "both",
+    "split": "test",
+    "threshold": 1.5,
+    "ema_alpha": 0.7,
+    "refractory_tokens": 25,
+    "num_keywords": 2000,
+    "stream_seed": 42,
+    "composition": {
+      "n_events": 2000,
+      "n_unknown_distractors": 584,
+      "n_clips": 2584,
+      "total_seconds": 7570.358375
+    }
+  },
+  "engines": {
+    "fixed": {
+      "events": 2000,
+      "true_positives": 1557,
+      "false_negatives": 443,
+      "detection_rate_pct": 77.85,
+      "fa_duplicate": 1094,
+      "fa_wrong_class": 580,
+      "fa_outside": 113,
+      "false_alarms": 1787,
+      "fa_per_hour": 849.7880392617477,
+      "fa_per_hour_excl_duplicates": 329.54846738018534,
+      "total_hours": 2.1028773263888887,
+      "background_hours": 1.5473217708333333,
+      "fa_per_background_hour": 1154.8987635826932,
+      "fa_per_background_hour_excl_duplicates": 447.87064530655084,
+      "latency_ms_mean": -342.8969974309507,
+      "latency_ms_median": -374.3750000003274,
+      "latency_ms_p90": 25.90000000018336,
+      "engine": "fixed",
+      "split": "test",
+      "threshold": 0.25,
+      "ema_alpha": 0.7,
+      "refractory_tokens": 25,
+      "num_keywords": 2000,
+      "stream_seed": 42,
+      "composition": {
+        "n_events": 2000,
+        "n_unknown_distractors": 584,
+        "n_clips": 2584,
+        "total_seconds": 7570.358375
+      },
+      "threshold_tuned_on_validation": {
+        "threshold": 0.25,
+        "target_detection_pct": 90.0,
+        "target_reached": false,
+        "validation_detection_rate_pct": 78.35,
+        "validation_fa_per_background_hour": 1184.3783713107327,
+        "validation_composition": {
+          "n_events": 2000,
+          "n_unknown_distractors": 594,
+          "n_clips": 2594,
+          "total_seconds": 7598.8864375
+        }
+      },
+      "fa_per_background_hour_ci95": [
+        1101.9671591542863,
+        1209.715825762965
+      ],
+      "fa_wrong_class_per_background_hour_ci95": [
+        344.9521618541683,
+        406.6269687358398
+      ],
+      "fa_outside_per_background_hour_ci95": [
+        60.18657218985825,
+        87.80149532691733
+      ],
+      "fa_per_hour_ci95": [
+        810.8403446580608,
+        890.12307576638
+      ]
+    },
+    "float": {
+      "events": 2000,
+      "true_positives": 1571,
+      "false_negatives": 429,
+      "detection_rate_pct": 78.55,
+      "fa_duplicate": 1111,
+      "fa_wrong_class": 577,
+      "fa_outside": 117,
+      "false_alarms": 1805,
+      "fa_per_hour": 858.3477397131811,
+      "fa_per_hour_excl_duplicates": 330.0240062941538,
+      "total_hours": 2.1028773263888887,
+      "background_hours": 1.5473217708333333,
+      "fa_per_background_hour": 1166.5317673568893,
+      "fa_per_background_hour_excl_duplicates": 448.5169232940062,
+      "latency_ms_mean": -343.0863303628256,
+      "latency_ms_median": -372.5624999997308,
+      "latency_ms_p90": 23.624999999810825,
+      "engine": "float",
+      "split": "test",
+      "threshold": 0.25,
+      "ema_alpha": 0.7,
+      "refractory_tokens": 25,
+      "num_keywords": 2000,
+      "stream_seed": 42,
+      "composition": {
+        "n_events": 2000,
+        "n_unknown_distractors": 584,
+        "n_clips": 2584,
+        "total_seconds": 7570.358375
+      },
+      "threshold_tuned_on_validation": {
+        "threshold": 0.25,
+        "target_detection_pct": 90.0,
+        "target_reached": false,
+        "validation_detection_rate_pct": 78.45,
+        "validation_fa_per_background_hour": 1182.449416308598,
+        "validation_composition": {
+          "n_events": 2000,
+          "n_unknown_distractors": 594,
+          "n_clips": 2594,
+          "total_seconds": 7598.8864375
+        }
+      },
+      "fa_per_background_hour_ci95": [
+        1113.3311463942432,
+        1221.6177716922316
+      ],
+      "fa_wrong_class_per_background_hour_ci95": [
+        343.0923358828877,
+        404.6091942134332
+      ],
+      "fa_outside_per_background_hour_ci95": [
+        62.53527195385285,
+        90.62202306320434
+      ],
+      "fa_per_hour_ci95": [
+        819.202099592217,
+        898.8806670060268
+      ]
+    }
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "note": "PyTorch only (no C engine for learned A). Identical recipe and seed; test clips use the zero-state 50-token last-token protocol; validation sequences are the 300 seeded sequences used for checkpoint selection.",
+  "c1": {
+    "checkpoint": "checkpoints/stream_model.pt",
+    "sha256_16": "74f3af31213ccc3d",
+    "parameters": 18060,
+    "best_epoch": 47,
+    "learned_a": false,
+    "init_ckpt": null,
+    "git_commit": "5c4020a2a350d5deeeaeeb3e65978fba82e1c6dd",
+    "seed": 42,
+    "test_clip": {
+      "correct": 3886,
+      "total": 4890,
+      "accuracy_pct": 79.4683026584867,
+      "wilson_ci": [
+        78.31323172829237,
+        80.57711084309322
+      ]
+    },
+    "validation_sequences": {
+      "kw_acc": 0.7919732441471572,
+      "bg_acc": 0.9697052856484794,
+      "bg_acc_before_first_clip": 0.9375234756479279,
+      "bg_acc_after_first_clip": 0.9795824260279237,
+      "kw_total": 5980,
+      "bg_total": 102031,
+      "bg_before_total": 23961,
+      "bg_after_total": 78070
+    }
+  },
+  "learned_a": {
+    "checkpoint": "/home/Jemin/.cache/kws-final/learned_a_ckpt/best_model.pt",
+    "sha256_16": "f382abae018d2c9d",
+    "parameters": 19084,
+    "best_epoch": 56,
+    "learned_a": true,
+    "init_ckpt": null,
+    "git_commit": "5c4020a2a350d5deeeaeeb3e65978fba82e1c6dd",
+    "seed": 42,
+    "test_clip": {
+      "correct": 4060,
+      "total": 4890,
+      "accuracy_pct": 83.02658486707567,
+      "wilson_ci": [
+        81.94858167327794,
+        84.05273911283429
+      ]
+    },
+    "validation_sequences": {
+      "kw_acc": 0.8252508361204013,
+      "bg_acc": 0.9770755946722075,
+      "bg_acc_before_first_clip": 0.9911940236217186,
+      "bg_acc_after_first_clip": 0.9727424106571027,
+      "kw_total": 5980,
+      "bg_total": 102031,
+      "bg_before_total": 23961,
+      "bg_after_total": 78070
+    },
+    "learned_abs_A_per_n": {
+      "c1_value": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "mean": [
+        1.0188449621200562,
+        1.9067691564559937,
+        2.8814711570739746,
+        3.7617712020874023,
+        4.850639343261719,
+        5.686626434326172,
+        6.620137691497803,
+        7.767611503601074
+      ],
+      "std": [
+        0.1393054723739624,
+        0.2737623155117035,
+        0.31641918420791626,
+        0.40235191583633423,
+        0.7118762135505676,
+        0.6522026062011719,
+        0.7607021331787109,
+        0.9697909355163574
+      ],
+      "min": [
+        0.6594153046607971,
+        1.2648183107376099,
+        1.9990259408950806,
+        2.7518792152404785,
+        3.4372105598449707,
+        4.084898471832275,
+        4.806254863739014,
+        5.419610023498535
+      ],
+      "max": [
+        1.4043152332305908,
+        2.878199815750122,
+        3.9185631275177,
+        4.992842197418213,
+        6.687957286834717,
+        7.564774990081787,
+        8.49744701385498,
+        12.43814754486084
+      ]
+    }
+  },
+  "difference_pt": 3.558282208588963
+}

@@ -1,0 +1,61 @@
+{
+  "port": "/dev/ttyACM0",
+  "baud": 115200,
+  "subset": 1000,
+  "seed": 0,
+  "bench_requested": true,
+  "bench": {
+    "version": 2,
+    "cpu_freq_hz": 160000000,
+    "ctx_bytes": 6072,
+    "frontend_cycles_min": 129350,
+    "frontend_cycles_median": 130325,
+    "step_cycles_min": 659763,
+    "step_cycles_median": 662461,
+    "step_cycles_max": 665607,
+    "step_stack_used_bytes": 3668,
+    "free_heap_before": 273776,
+    "free_heap_after": 273776,
+    "min_free_heap_before": 273776,
+    "min_free_heap_after": 273776,
+    "main_stack_high_water": 12344,
+    "step_f32_cycles_median": 0,
+    "step_f32_rounds": 0
+  },
+  "bench_ok": true,
+  "cpu_freq_hz": 160000000,
+  "host_weights_id": "2f4bdc556afab73f",
+  "host_export_id": "6a9a3c92",
+  "num_eval": 1000,
+  "total_clips_evaluated": 1000,
+  "bit_identical_clips": 1000,
+  "host_tokens": 50000,
+  "bit_identical_tokens": 50000,
+  "mismatched_tokens": 0,
+  "device_missing_tokens": 0,
+  "desync_tokens": 0,
+  "crc_errors": 0,
+  "reset_failures": 0,
+  "max_logit_diff": 0,
+  "device_correct": 888,
+  "device_accuracy_pct": 88.8,
+  "device_wilson_ci": [
+    86.69499763240903,
+    90.6080459091119
+  ],
+  "host_correct": 888,
+  "host_accuracy_pct": 88.8,
+  "host_wilson_ci": [
+    86.69499763240903,
+    90.6080459091119
+  ],
+  "cycles": {
+    "count": 50000,
+    "min": 655099,
+    "median": 665300,
+    "mean": 665302.05678,
+    "p99": 671132,
+    "max": 675502
+  },
+  "parity_ok": true
+}

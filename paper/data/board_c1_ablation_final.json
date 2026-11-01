@@ -1,0 +1,14 @@
+{
+  "_provenance": "firmware/main/bench_ablation.c, env esp32-c3-ablation (-DMM_ENABLE_F32 -DMM_BENCH_ZOH_ABLATION), FP32 soft-float full step (front-end + model), same noise frame, 11 rounds after one warm-up, median; raw: board_ablation_final_boot.txt",
+  "rounds": 11,
+  "all_stepped": true,
+  "c1_step_cycles_median": 7239491,
+  "zoh_expf_step_cycles_median": 9147942,
+  "max_abs_logit_diff": 2.68220901e-06,
+  "extra_cycles_per_token_with_expf": 1908451,
+  "ratio_expf_over_c1": 1.2636167376960619,
+  "c1_ms": 45.24681875,
+  "zoh_expf_ms": 57.1746375,
+  "earlier_derived_estimate_extra_cycles": 2500000.0,
+  "note": "The derived estimate in math.md (7 extra expf x 2,831 cycles x 128 channel-layers = 2.5e6) overestimated the measured extra cost."
+}

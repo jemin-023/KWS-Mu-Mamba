@@ -1,0 +1,82 @@
+T1 n=0: max rel err exp(-softplus(p)) vs sigmoid(-p) = 1.052e-15
+T1 n=0: max rel err = 1.052e-15
+T1 n=1: max rel err = 2.026e-15
+T1 n=2: max rel err = 6.204e-15
+T1 n=3: max rel err = 3.954e-15
+T1 n=4: max rel err = 8.379e-15
+T1 n=5: max rel err = 1.240e-14
+T1 n=6: max rel err = 1.373e-14
+T1 n=7: max rel err = 7.986e-15
+.T2 n=0: max rel err = 6.105e-14
+T2 n=1: max rel err = 6.096e-14
+T2 n=2: max rel err = 6.088e-14
+T2 n=3: max rel err = 6.079e-14
+T2 n=4: max rel err = 6.070e-14
+T2 n=5: max rel err = 6.062e-14
+T2 n=6: max rel err = 6.053e-14
+T2 n=7: max rel err = 6.044e-14
+T2 saturation at p=12: max |value - 1/(n+1)| = 6.144e-06
+.T3 flash footprint = 5130 bytes = 5.01 KiB
+T3 max deviations from definitions (LSB): q=0.0, softplus=0.0, silu=0.0
+T3 q non-increasing, softplus non-decreasing, q entries within [0, 2**31-1]
+.T4 max |f''| = 0.096225044865; 1/(6*sqrt(3)) = 0.096225044865; diff = 2.128e-13
+T4 peaks at f = 0.211325 (target 0.211325) and f = 0.788675 (target 0.788675)
+.T5 max |q_lut/2**31 - sigmoid(-p)| = 4.696487420e-05 at p_int=-2752 (p=-1.34375)
+T5 bound = 4.698581651e-05
+.T6 whole-sweep max |dq|/(1-q) = 5.970119e-04 at p_int=-24519 (p=-11.9722)
+T6 whole-sweep bound min = 4.882826e-04 (at p_int=24576)
+T6 long-memory (p<=-4) max |dq|/(1-q) = 5.970119e-04 at p_int=-24519 (p=-11.9722)
+T6 paper yardstick h^2/8 = 4.882812e-04
+.T7 n=0: max abs err = 4.696441e-05 (p_int=2752)  bound = 4.698093e-05
+T7 n=0: max decay-rate rel err = 5.824824e-04 (p_int=-24254)
+T7 n=1: max abs err = 7.560921e-05 (p_int=-3135)  bound = 9.396186e-05
+T7 n=1: max decay-rate rel err = 5.860796e-04 (p_int=-24254)
+T7 n=2: max abs err = 9.449190e-05 (p_int=-3520)  bound = 1.409428e-04
+T7 n=2: max decay-rate rel err = 5.896769e-04 (p_int=-24254)
+T7 n=3: max abs err = 1.075920e-04 (p_int=-3905)  bound = 1.879237e-04
+T7 n=3: max decay-rate rel err = 5.932741e-04 (p_int=-24254)
+T7 n=4: max abs err = 1.174179e-04 (p_int=-4031)  bound = 2.349047e-04
+T7 n=4: max decay-rate rel err = 5.968714e-04 (p_int=-24254)
+T7 n=5: max abs err = 1.248413e-04 (p_int=-4290)  bound = 2.818856e-04
+T7 n=5: max decay-rate rel err = 5.896747e-04 (p_int=-24254)
+T7 n=6: max abs err = 1.306348e-04 (p_int=-4542)  bound = 3.288665e-04
+T7 n=6: max decay-rate rel err = 5.855620e-04 (p_int=-24254)
+T7 n=7: max abs err = 1.355272e-04 (p_int=-4801)  bound = 3.758475e-04
+T7 n=7: max decay-rate rel err = 5.833767e-04 (p_int=-24254)
+.T8 max |softplus_lut/2**24 - softplus(p)| = 1.220771839e-04 at p_int=-64
+T8 bound = 1.221895218e-04
+.T9 measured max |silu''| M = 0.500000000000 attained at x = 0.000000000
+T9 max |silu_lut/4096 - silu(x)| = 2.671381760e-04 at x_int=-3520
+T9 bound = 3.051757812e-04
+.T10 acc = 266338304 (< 2**31-1); acc*32767 = 8727107207168; log2 = 42.988641
+.T11 eps=0.001: d=2147484, stagnation up to |h|=999, changes at k=1001
+T11 eps=0.0001: d=214748, stagnation up to |h|=10000, changes at k=10002
+T11 eps=1e-3 noise: floor means per seed = ['-346.6', '-475.4', '-223.0', '-449.2', '-311.5', '-283.7', '-361.6', '-388.5']
+T11 eps=1e-3 noise: average floor mean = -354.9 LSB (theory ~ -0.35/eps .. -0.5/eps)
+.T12 eps=0.001: symmetric, dead-band up to |h|=499
+T12 eps=0.0001: symmetric, dead-band up to |h|=5000
+T12 eps=1e-3 noise: round means per seed = ['-105.6', '24.1', '-21.9', '-19.8', '146.1', '118.1', '103.4', '108.8']
+T12 eps=1e-3 noise: average round mean = 44.1 LSB
+T12 eps=1e-3 noise: round - floor per seed = ['241.0', '499.4', '201.1', '429.4', '457.7', '401.8', '465.1', '497.3']
+.T13 MuMambaKWS() parameters = 18060
+T13 closed form = 18060; baseline = 35914; expf/clip = 204800
+.T14 state memory identities hold: 4096, 768, 4864, 233984, 239988, 234.36 KiB
+.T15 checked 20000 random (acc, M, S); max |requant - acc*M/2**S| = 1/2 = 0.500000
+.test_lut_symbols_match_generated_source: all three tables match
+.Testing q table interpolation...
+Testing softplus table interpolation...
+Testing silu table interpolation...
+Testing mm_silu_q12 for all int16...
+test_c_interpolation_matches_python_mirror: all checks passed
+.mm_rsqrt_q12(0) = 16777216, mm_rsqrt_q12(1) = 16777216 (clamped to 2^24)
+Testing mm_rsqrt_q12 on 24999 values...
+test_rsqrt_q12_accuracy: max rel err for x>=16 = 1.931464e-03 at x=1061290516 (bound = 7.812500e-03)
+test_rsqrt_q12_accuracy: max rel err for x>=4096 = 1.931464e-03 at x=1061290516 (bound = 7.812500e-03)
+.Testing mm_log2_q8 on 89999 values...
+test_log2_q8_accuracy: max abs err = 3.760616e-03 at x=701 (bound = 7.812500e-03)
+.sizeof(mm_context_t) without MM_ENABLE_F32 = 6072
+sizeof(mm_context_t) with MM_ENABLE_F32 = 11752
+lib.mm_context_size() = 11752
+.
+20 passed in 1.92s
+[capped] exit=0 peak_mem=332 MiB (cap 2G)

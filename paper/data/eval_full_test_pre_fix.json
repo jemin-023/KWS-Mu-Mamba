@@ -1,0 +1,93 @@
+{
+  "engine": "both",
+  "split": "test",
+  "subset": null,
+  "seed": 0,
+  "total_clips": 4890,
+  "checkpoint_id": "3e3052cf5abd9675",
+  "float_correct": 4517,
+  "float_accuracy_pct": 92.3721881390593,
+  "float_wilson_ci": [
+    91.59449128843727,
+    93.0833642340547
+  ],
+  "fixed_correct": 4512,
+  "fixed_accuracy_pct": 92.26993865030676,
+  "fixed_wilson_ci": [
+    91.48777666776301,
+    92.98574040028275
+  ],
+  "accuracy_drop_pt": 0.10224948875254825,
+  "top1_agreement_pct": 99.67280163599182,
+  "median_logit_error": 0.02343040704727173,
+  "fixed_vs_float_avg_linf": 0.14118632674217224,
+  "fixed_vs_float_avg_mean_abs": 0.04967058449983597,
+  "fixed_vs_float_worst_linf": 1.6087541580200195,
+  "floatc_vs_pytorch_avg_linf": 1.7263578229176346e-06,
+  "floatc_vs_pytorch_avg_mean_abs": 6.744178335793549e-07,
+  "floatc_vs_pytorch_worst_linf": 9.894371032714844e-06,
+  "floatc_vs_pytorch_top1_agreement_pct": 100.0,
+  "floatc_vs_pytorch_top1_agree_count": 4890,
+  "per_class_fixed": {
+    "yes": {
+      "correct": 405,
+      "total": 419,
+      "accuracy_pct": 96.65871121718376
+    },
+    "no": {
+      "correct": 372,
+      "total": 405,
+      "accuracy_pct": 91.85185185185185
+    },
+    "up": {
+      "correct": 394,
+      "total": 425,
+      "accuracy_pct": 92.70588235294117
+    },
+    "down": {
+      "correct": 360,
+      "total": 406,
+      "accuracy_pct": 88.66995073891626
+    },
+    "left": {
+      "correct": 383,
+      "total": 412,
+      "accuracy_pct": 92.96116504854369
+    },
+    "right": {
+      "correct": 358,
+      "total": 396,
+      "accuracy_pct": 90.40404040404042
+    },
+    "on": {
+      "correct": 367,
+      "total": 396,
+      "accuracy_pct": 92.67676767676768
+    },
+    "off": {
+      "correct": 362,
+      "total": 402,
+      "accuracy_pct": 90.04975124378109
+    },
+    "stop": {
+      "correct": 401,
+      "total": 411,
+      "accuracy_pct": 97.5669099756691
+    },
+    "go": {
+      "correct": 365,
+      "total": 402,
+      "accuracy_pct": 90.79601990049751
+    },
+    "unknown": {
+      "correct": 357,
+      "total": 408,
+      "accuracy_pct": 87.5
+    },
+    "silence": {
+      "correct": 388,
+      "total": 408,
+      "accuracy_pct": 95.09803921568627
+    }
+  }
+}

@@ -1,0 +1,881 @@
+{
+  "run_parameters": {
+    "engine": "both",
+    "split": "test",
+    "threshold": 1.5,
+    "ema_alpha": 0.85,
+    "refractory_tokens": 50,
+    "num_keywords": 2000,
+    "stream_seed": 42,
+    "composition": {
+      "n_events": 2000,
+      "n_unknown_distractors": 584,
+      "n_clips": 2584,
+      "total_seconds": 7570.358375
+    }
+  },
+  "engines": {
+    "fixed": [
+      {
+        "events": 2000,
+        "true_positives": 1589,
+        "false_negatives": 411,
+        "detection_rate_pct": 79.45,
+        "fa_duplicate": 37,
+        "fa_wrong_class": 426,
+        "fa_outside": 177,
+        "false_alarms": 640,
+        "fa_per_hour": 304.3449049398537,
+        "fa_per_hour_excl_duplicates": 286.7499651230184,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 413.6179119714178,
+        "fa_per_background_hour_excl_duplicates": 389.70562643557025,
+        "fa_wrong_class_per_background_hour": 275.31442265597497,
+        "fa_outside_per_background_hour": 114.39120377959524,
+        "latency_ms_mean": -372.3594241661397,
+        "latency_ms_median": -418.0624999999054,
+        "latency_ms_p90": -52.412500000082055,
+        "engine": "fixed",
+        "threshold": 0.5,
+        "fa_per_background_hour_ci95": [
+          382.1895679997684,
+          446.94167326388657
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          249.78781211418024,
+          302.74202659489055
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          98.15932032674341,
+          132.54067768280353
+        ],
+        "fa_per_hour_ci95": [
+          281.219561279375,
+          328.8649188687853
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1621,
+        "false_negatives": 379,
+        "detection_rate_pct": 81.05,
+        "fa_duplicate": 21,
+        "fa_wrong_class": 287,
+        "fa_outside": 129,
+        "false_alarms": 437,
+        "fa_per_hour": 207.81050540424386,
+        "fa_per_hour_excl_duplicates": 197.8241882109049,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 282.4234805179837,
+        "fa_per_background_hour_excl_duplicates": 268.85164278142156,
+        "fa_wrong_class_per_background_hour": 185.4817823996827,
+        "fa_outside_per_background_hour": 83.3698603817389,
+        "latency_ms_mean": -368.68117674274856,
+        "latency_ms_median": -401.1875000001055,
+        "latency_ms_p90": -93.43749999993634,
+        "engine": "fixed",
+        "threshold": 1.0,
+        "fa_per_background_hour_ci95": [
+          256.56141566878017,
+          310.1861557375915
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          164.64136166162845,
+          208.229786560732
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          69.6046748335885,
+          99.06058293491219
+        ],
+        "fa_per_hour_ci95": [
+          188.78089512802572,
+          228.23860705563322
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1614,
+        "false_negatives": 386,
+        "detection_rate_pct": 80.7,
+        "fa_duplicate": 13,
+        "fa_wrong_class": 207,
+        "fa_outside": 89,
+        "false_alarms": 309,
+        "fa_per_hour": 146.9415244162731,
+        "fa_per_hour_excl_duplicates": 140.75951853468234,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 199.69989812370017,
+        "fa_per_background_hour_excl_duplicates": 191.29828428678073,
+        "fa_wrong_class_per_background_hour": 133.77954340325545,
+        "fa_outside_per_background_hour": 57.51874088352529,
+        "latency_ms_mean": -360.4249148079241,
+        "latency_ms_median": -380.18749999991996,
+        "latency_ms_p90": -102.83124999996286,
+        "engine": "fixed",
+        "threshold": 1.5,
+        "fa_per_background_hour_ci95": [
+          178.05196758317348,
+          223.25408069276955
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          116.17479710905138,
+          153.2983766650868
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          46.19227202100129,
+          70.78176010848192
+        ],
+        "fa_per_hour_ci95": [
+          131.01272353069533,
+          164.27296787516943
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1593,
+        "false_negatives": 407,
+        "detection_rate_pct": 79.65,
+        "fa_duplicate": 5,
+        "fa_wrong_class": 151,
+        "fa_outside": 53,
+        "false_alarms": 209,
+        "fa_per_hour": 99.38763301942097,
+        "fa_per_hour_excl_duplicates": 97.00993844957836,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 135.07209937816614,
+        "fa_per_background_hour_excl_duplicates": 131.84070944088944,
+        "fa_wrong_class_per_background_hour": 97.5879761057564,
+        "fa_outside_per_background_hour": 34.25273333513304,
+        "latency_ms_mean": -346.8805320150618,
+        "latency_ms_median": -360.56250000001455,
+        "latency_ms_p90": -91.8625000002068,
+        "engine": "fixed",
+        "threshold": 2.0,
+        "fa_per_background_hour_ci95": [
+          117.37948936629319,
+          154.678589785907
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          82.6435962263539,
+          114.45378494926902
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          25.657647737339143,
+          44.80341854937391
+        ],
+        "fa_per_hour_ci95": [
+          86.36920331327838,
+          113.81431834092223
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1548,
+        "false_negatives": 452,
+        "detection_rate_pct": 77.4,
+        "fa_duplicate": 1,
+        "fa_wrong_class": 106,
+        "fa_outside": 31,
+        "false_alarms": 138,
+        "fa_per_hour": 65.62437012765595,
+        "fa_per_hour_excl_duplicates": 65.14883121368743,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 89.18636226883697,
+        "fa_per_background_hour_excl_duplicates": 88.54008428138162,
+        "fa_wrong_class_per_background_hour": 68.50546667026607,
+        "fa_outside_per_background_hour": 20.03461761111555,
+        "latency_ms_mean": -330.12899709302286,
+        "latency_ms_median": -341.9374999998581,
+        "latency_ms_p90": -78.50625000037333,
+        "engine": "fixed",
+        "threshold": 2.5,
+        "fa_per_background_hour_ci95": [
+          74.92747395109,
+          105.36898974536346
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          56.08666303459728,
+          82.85538854591383
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          13.612550651179722,
+          28.437540486198163
+        ],
+        "fa_per_hour_ci95": [
+          55.132513068253324,
+          77.5317369956577
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1512,
+        "false_negatives": 488,
+        "detection_rate_pct": 75.6,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 70,
+        "fa_outside": 23,
+        "false_alarms": 93,
+        "fa_per_hour": 44.225118999072485,
+        "fa_per_hour_excl_duplicates": 44.225118999072485,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 60.10385283334665,
+        "fa_per_background_hour_excl_duplicates": 60.10385283334665,
+        "fa_wrong_class_per_background_hour": 45.23945912187382,
+        "fa_outside_per_background_hour": 14.864393711472827,
+        "latency_ms_mean": -308.4905340608409,
+        "latency_ms_median": -319.5937499997399,
+        "latency_ms_p90": -49.46874999982353,
+        "engine": "fixed",
+        "threshold": 3.0,
+        "fa_per_background_hour_ci95": [
+          48.511566332336315,
+          73.63128030181676
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          35.266377773872364,
+          57.15733501533287
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          9.422750530545686,
+          22.30388891655448
+        ],
+        "fa_per_hour_ci95": [
+          35.69537879423015,
+          54.17875859690692
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1430,
+        "false_negatives": 570,
+        "detection_rate_pct": 71.5,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 45,
+        "fa_outside": 18,
+        "false_alarms": 63,
+        "fa_per_hour": 29.958951580016848,
+        "fa_per_hour_excl_duplicates": 29.958951580016848,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 40.71551320968644,
+        "fa_per_background_hour_excl_duplicates": 40.71551320968644,
+        "fa_wrong_class_per_background_hour": 29.082509435490316,
+        "fa_outside_per_background_hour": 11.633003774196126,
+        "latency_ms_mean": -287.9135489510399,
+        "latency_ms_median": -299.99999999972715,
+        "latency_ms_p90": -31.112500000381242,
+        "engine": "fixed",
+        "threshold": 3.5,
+        "fa_per_background_hour_ci95": [
+          31.28691827906927,
+          52.09282827028266
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          21.212981945285353,
+          38.91468576993517
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          6.894455297849358,
+          18.385161253309978
+        ],
+        "fa_per_hour_ci95": [
+          23.02128097915234,
+          38.330513280727715
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1292,
+        "false_negatives": 708,
+        "detection_rate_pct": 64.60000000000001,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 32,
+        "fa_outside": 8,
+        "false_alarms": 40,
+        "fa_per_hour": 19.021556558740855,
+        "fa_per_hour_excl_duplicates": 19.021556558740855,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 25.851119498213613,
+        "fa_per_background_hour_excl_duplicates": 25.851119498213613,
+        "fa_wrong_class_per_background_hour": 20.680895598570892,
+        "fa_outside_per_background_hour": 5.170223899642723,
+        "latency_ms_mean": -271.17216524766786,
+        "latency_ms_median": -281.4062500001455,
+        "latency_ms_p90": -17.631249999885647,
+        "engine": "fixed",
+        "threshold": 4.0,
+        "fa_per_background_hour_ci95": [
+          18.468418773942936,
+          35.20188753929906
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          14.145717279927153,
+          29.195253974285574
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          2.2321357081975193,
+          10.18740220510425
+        ],
+        "fa_per_hour_ci95": [
+          13.589278881455897,
+          25.901961222587783
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 971,
+        "false_negatives": 1029,
+        "detection_rate_pct": 48.55,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 14,
+        "fa_outside": 3,
+        "false_alarms": 17,
+        "fa_per_hour": 8.084161537464864,
+        "fa_per_hour_excl_duplicates": 8.084161537464864,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 10.986725786740786,
+        "fa_per_background_hour_excl_duplicates": 10.986725786740786,
+        "fa_wrong_class_per_background_hour": 9.047891824374764,
+        "fa_outside_per_background_hour": 1.9388339623660211,
+        "latency_ms_mean": -235.28746138001497,
+        "latency_ms_median": -244.50000000001637,
+        "latency_ms_p90": 1.187500000014552,
+        "engine": "fixed",
+        "threshold": 5.0,
+        "fa_per_background_hour_ci95": [
+          6.400172644293511,
+          17.59081228544183
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          4.946566655091049,
+          15.18082506470835
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          0.39983417447969233,
+          5.666095594984473
+        ],
+        "fa_per_hour_ci95": [
+          4.70932200624997,
+          12.943525746528984
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 589,
+        "false_negatives": 1411,
+        "detection_rate_pct": 29.45,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 6,
+        "fa_outside": 0,
+        "false_alarms": 6,
+        "fa_per_hour": 2.8532334838111284,
+        "fa_per_hour_excl_duplicates": 2.8532334838111284,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 3.8776679247320422,
+        "fa_per_background_hour_excl_duplicates": 3.8776679247320422,
+        "fa_wrong_class_per_background_hour": 3.8776679247320422,
+        "fa_outside_per_background_hour": 0.0,
+        "latency_ms_mean": -187.80984719862764,
+        "latency_ms_median": -184.93750000016007,
+        "latency_ms_p90": 28.737500000170368,
+        "engine": "fixed",
+        "threshold": 6.0,
+        "fa_per_background_hour_ci95": [
+          1.4230357867355463,
+          8.440050588498673
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          1.4230357867355463,
+          8.440050588498673
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          0.0,
+          2.3840415895701086
+        ],
+        "fa_per_hour_ci95": [
+          1.0470864019785675,
+          6.210288093668653
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 43,
+        "false_negatives": 1957,
+        "detection_rate_pct": 2.15,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 0,
+        "fa_outside": 0,
+        "false_alarms": 0,
+        "fa_per_hour": 0.0,
+        "fa_per_hour_excl_duplicates": 0.0,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 0.0,
+        "fa_per_background_hour_excl_duplicates": 0.0,
+        "fa_wrong_class_per_background_hour": 0.0,
+        "fa_outside_per_background_hour": 0.0,
+        "latency_ms_mean": -123.84883720931633,
+        "latency_ms_median": -126.5625000000341,
+        "latency_ms_p90": 67.26250000024271,
+        "engine": "fixed",
+        "threshold": 8.0,
+        "fa_per_background_hour_ci95": [
+          0.0,
+          2.3840415895701086
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          0.0,
+          2.3840415895701086
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          0.0,
+          2.3840415895701086
+        ],
+        "fa_per_hour_ci95": [
+          0.0,
+          1.7542057293701327
+        ]
+      }
+    ],
+    "float": [
+      {
+        "events": 2000,
+        "true_positives": 1587,
+        "false_negatives": 413,
+        "detection_rate_pct": 79.35,
+        "fa_duplicate": 44,
+        "fa_wrong_class": 440,
+        "fa_outside": 190,
+        "false_alarms": 674,
+        "fa_per_hour": 320.5132280147834,
+        "fa_per_hour_excl_duplicates": 299.5895158001685,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 435.59136354489937,
+        "fa_per_background_hour_excl_duplicates": 407.1551320968644,
+        "fa_wrong_class_per_background_hour": 284.36231448034977,
+        "fa_outside_per_background_hour": 122.79281761651467,
+        "latency_ms_mean": -368.3899259609331,
+        "latency_ms_median": -419.06249999999545,
+        "latency_ms_p90": -28.19999999996968,
+        "engine": "float",
+        "threshold": 0.5,
+        "fa_per_background_hour_ci95": [
+          403.322735346687,
+          469.7547768558681
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          258.4094972503159,
+          312.2156401068933
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          105.95276306706621,
+          141.54884355124912
+        ],
+        "fa_per_hour_ci95": [
+          296.7695933769221,
+          345.6510677349989
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1614,
+        "false_negatives": 386,
+        "detection_rate_pct": 80.7,
+        "fa_duplicate": 25,
+        "fa_wrong_class": 302,
+        "fa_outside": 142,
+        "false_alarms": 469,
+        "fa_per_hour": 223.02775065123652,
+        "fa_per_hour_excl_duplicates": 211.13927780202349,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 303.10437611655465,
+        "fa_per_background_hour_excl_duplicates": 286.9474264301711,
+        "fa_wrong_class_per_background_hour": 195.1759522115128,
+        "fa_outside_per_background_hour": 91.77147421865833,
+        "latency_ms_mean": -368.0593633828999,
+        "latency_ms_median": -400.99999999983993,
+        "latency_ms_p90": -94.54999999979906,
+        "engine": "float",
+        "threshold": 1.0,
+        "fa_per_background_hour_ci95": [
+          276.28976298021735,
+          331.81856265102584
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          173.7817423260114,
+          218.4768220358322
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          77.29834758441531,
+          108.16759583164396
+        ],
+        "fa_per_hour_ci95": [
+          203.29724418675477,
+          244.15598547454556
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1610,
+        "false_negatives": 390,
+        "detection_rate_pct": 80.5,
+        "fa_duplicate": 11,
+        "fa_wrong_class": 219,
+        "fa_outside": 92,
+        "false_alarms": 322,
+        "fa_per_hour": 153.12353029786388,
+        "fa_per_hour_excl_duplicates": 147.89260224421014,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 208.1015119606196,
+        "fa_per_background_hour_excl_duplicates": 200.99245409861084,
+        "fa_wrong_class_per_background_hour": 141.53487925271955,
+        "fa_outside_per_background_hour": 59.45757484589131,
+        "latency_ms_mean": -360.54697204967977,
+        "latency_ms_median": -381.031250000035,
+        "latency_ms_p90": -98.36874999964458,
+        "engine": "float",
+        "threshold": 1.5,
+        "fa_per_background_hour_ci95": [
+          185.989900390168,
+          232.11865338750576
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          123.40912942667565,
+          161.57351908853397
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          47.93119709439604,
+          72.91943739724536
+        ],
+        "fa_per_hour_ci95": [
+          136.8535474786936,
+          170.79562430765571
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1589,
+        "false_negatives": 411,
+        "detection_rate_pct": 79.45,
+        "fa_duplicate": 6,
+        "fa_wrong_class": 159,
+        "fa_outside": 56,
+        "false_alarms": 221,
+        "fa_per_hour": 105.09409998704322,
+        "fa_per_hour_excl_duplicates": 102.2408665032321,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 142.82743522763022,
+        "fa_per_background_hour_excl_duplicates": 138.94976730289818,
+        "fa_wrong_class_per_background_hour": 102.75820000539912,
+        "fa_outside_per_background_hour": 36.191567297499056,
+        "latency_ms_mean": -346.9876494650696,
+        "latency_ms_median": -360.8125000000655,
+        "latency_ms_p90": -90.83749999990685,
+        "engine": "float",
+        "threshold": 2.0,
+        "fa_per_background_hour_ci95": [
+          124.61625338599562,
+          162.95131704846716
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          87.40660215736523,
+          120.02994686879283
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          27.338720995212228,
+          46.99776050357008
+        ],
+        "fa_per_hour_ci95": [
+          91.69409905377205,
+          119.90148797126258
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1553,
+        "false_negatives": 447,
+        "detection_rate_pct": 77.64999999999999,
+        "fa_duplicate": 1,
+        "fa_wrong_class": 111,
+        "fa_outside": 32,
+        "false_alarms": 144,
+        "fa_per_hour": 68.47760361146707,
+        "fa_per_hour_excl_duplicates": 68.00206469749855,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 93.06403019356901,
+        "fa_per_background_hour_excl_duplicates": 92.41775220611368,
+        "fa_wrong_class_per_background_hour": 71.73685660754278,
+        "fa_outside_per_background_hour": 20.680895598570892,
+        "latency_ms_mean": -329.5611719253015,
+        "latency_ms_median": -342.6249999997708,
+        "latency_ms_p90": -71.53749999979485,
+        "engine": "float",
+        "threshold": 2.5,
+        "fa_per_background_hour_ci95": [
+          78.48491728547279,
+          109.56577755397073
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          59.01379376378986,
+          86.3896798391871
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          14.145717279927153,
+          29.195253974285574
+        ],
+        "fa_per_hour_ci95": [
+          57.750121547226705,
+          80.61978262834195
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1503,
+        "false_negatives": 497,
+        "detection_rate_pct": 75.14999999999999,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 79,
+        "fa_outside": 24,
+        "false_alarms": 103,
+        "fa_per_hour": 48.9805081387577,
+        "fa_per_hour_excl_duplicates": 48.9805081387577,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 66.56663270790006,
+        "fa_per_background_hour_excl_duplicates": 66.56663270790006,
+        "fa_wrong_class_per_background_hour": 51.055961008971884,
+        "fa_outside_per_background_hour": 15.510671698928169,
+        "latency_ms_mean": -310.0854540918134,
+        "latency_ms_median": -319.24999999955617,
+        "latency_ms_p90": -51.93749999943981,
+        "engine": "float",
+        "threshold": 3.0,
+        "fa_per_background_hour_ci95": [
+          54.333843114958675,
+          80.73140170434942
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          40.42148513551276,
+          63.63096094204758
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          9.937980027518654,
+          23.07865000472462
+        ],
+        "fa_per_hour_ci95": [
+          39.97947825572342,
+          59.40311109899235
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1433,
+        "false_negatives": 567,
+        "detection_rate_pct": 71.65,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 50,
+        "fa_outside": 19,
+        "false_alarms": 69,
+        "fa_per_hour": 32.812185063827975,
+        "fa_per_hour_excl_duplicates": 32.812185063827975,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 44.59318113441849,
+        "fa_per_background_hour_excl_duplicates": 44.59318113441849,
+        "fa_wrong_class_per_background_hour": 32.31389937276702,
+        "fa_outside_per_background_hour": 12.279281761651466,
+        "latency_ms_mean": -289.3748255408182,
+        "latency_ms_median": -299.50000000008004,
+        "latency_ms_p90": -29.9999999997454,
+        "engine": "float",
+        "threshold": 3.5,
+        "fa_per_background_hour_ci95": [
+          34.69615665520648,
+          56.435524750624865
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          23.98399895677497,
+          42.601847855365776
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          7.392929757723217,
+          19.175619532326433
+        ],
+        "fa_per_hour_ci95": [
+          25.529838513707276,
+          41.52592022331611
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 1308,
+        "false_negatives": 692,
+        "detection_rate_pct": 65.4,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 32,
+        "fa_outside": 11,
+        "false_alarms": 43,
+        "fa_per_hour": 20.44817330064642,
+        "fa_per_hour_excl_duplicates": 20.44817330064642,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 27.789953460579635,
+        "fa_per_background_hour_excl_duplicates": 27.789953460579635,
+        "fa_wrong_class_per_background_hour": 20.680895598570892,
+        "fa_outside_per_background_hour": 7.1090578620087435,
+        "latency_ms_mean": -273.15491207949424,
+        "latency_ms_median": -283.84374999990314,
+        "latency_ms_p90": -19.512499999655166,
+        "engine": "float",
+        "threshold": 4.0,
+        "fa_per_background_hour_ci95": [
+          20.11172711362254,
+          37.43288493846342
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          14.145717279927153,
+          29.195253974285574
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          3.548816070932352,
+          12.720068239395285
+        ],
+        "fa_per_hour_ci95": [
+          14.798444408265135,
+          27.543555243827026
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 986,
+        "false_negatives": 1014,
+        "detection_rate_pct": 49.3,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 14,
+        "fa_outside": 3,
+        "false_alarms": 17,
+        "fa_per_hour": 8.084161537464864,
+        "fa_per_hour_excl_duplicates": 8.084161537464864,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 10.986725786740786,
+        "fa_per_background_hour_excl_duplicates": 10.986725786740786,
+        "fa_wrong_class_per_background_hour": 9.047891824374764,
+        "fa_outside_per_background_hour": 1.9388339623660211,
+        "latency_ms_mean": -239.79354716024224,
+        "latency_ms_median": -250.65624999979264,
+        "latency_ms_p90": -1.6875000001164153,
+        "engine": "float",
+        "threshold": 5.0,
+        "fa_per_background_hour_ci95": [
+          6.400172644293511,
+          17.59081228544183
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          4.946566655091049,
+          15.18082506470835
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          0.39983417447969233,
+          5.666095594984473
+        ],
+        "fa_per_hour_ci95": [
+          4.70932200624997,
+          12.943525746528984
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 613,
+        "false_negatives": 1387,
+        "detection_rate_pct": 30.65,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 6,
+        "fa_outside": 1,
+        "false_alarms": 7,
+        "fa_per_hour": 3.3287723977796495,
+        "fa_per_hour_excl_duplicates": 3.3287723977796495,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 4.523945912187382,
+        "fa_per_background_hour_excl_duplicates": 4.523945912187382,
+        "fa_wrong_class_per_background_hour": 3.8776679247320422,
+        "fa_outside_per_background_hour": 0.6462779874553404,
+        "latency_ms_mean": -191.601345840115,
+        "latency_ms_median": -190.43749999946158,
+        "latency_ms_p90": 20.33750000000515,
+        "engine": "float",
+        "threshold": 6.0,
+        "fa_per_background_hour_ci95": [
+          1.81886088890493,
+          9.321057606482734
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          1.4230357867355463,
+          8.440050588498673
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          0.016362341990867623,
+          3.600830477514839
+        ],
+        "fa_per_hour_ci95": [
+          1.3383391490328915,
+          6.8585433780245
+        ]
+      },
+      {
+        "events": 2000,
+        "true_positives": 47,
+        "false_negatives": 1953,
+        "detection_rate_pct": 2.35,
+        "fa_duplicate": 0,
+        "fa_wrong_class": 0,
+        "fa_outside": 0,
+        "false_alarms": 0,
+        "fa_per_hour": 0.0,
+        "fa_per_hour_excl_duplicates": 0.0,
+        "total_hours": 2.1028773263888887,
+        "background_hours": 1.5473217708333333,
+        "fa_per_background_hour": 0.0,
+        "fa_per_background_hour_excl_duplicates": 0.0,
+        "fa_wrong_class_per_background_hour": 0.0,
+        "fa_outside_per_background_hour": 0.0,
+        "latency_ms_mean": -114.67952127661877,
+        "latency_ms_median": -95.93749999930878,
+        "latency_ms_p90": 66.35000000005674,
+        "engine": "float",
+        "threshold": 8.0,
+        "fa_per_background_hour_ci95": [
+          0.0,
+          2.3840415895701086
+        ],
+        "fa_wrong_class_per_background_hour_ci95": [
+          0.0,
+          2.3840415895701086
+        ],
+        "fa_outside_per_background_hour_ci95": [
+          0.0,
+          2.3840415895701086
+        ],
+        "fa_per_hour_ci95": [
+          0.0,
+          1.7542057293701327
+        ]
+      }
+    ]
+  }
+}

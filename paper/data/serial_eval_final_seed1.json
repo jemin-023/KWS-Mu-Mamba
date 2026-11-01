@@ -1,0 +1,42 @@
+{
+  "port": "/dev/ttyACM0",
+  "baud": 115200,
+  "subset": 200,
+  "seed": 1,
+  "bench_requested": false,
+  "cpu_freq_hz": 160000000,
+  "host_weights_id": "2f4bdc556afab73f",
+  "host_export_id": "6a9a3c92",
+  "num_eval": 200,
+  "total_clips_evaluated": 200,
+  "bit_identical_clips": 200,
+  "host_tokens": 10000,
+  "bit_identical_tokens": 10000,
+  "mismatched_tokens": 0,
+  "device_missing_tokens": 0,
+  "desync_tokens": 0,
+  "crc_errors": 0,
+  "reset_failures": 0,
+  "max_logit_diff": 0,
+  "device_correct": 183,
+  "device_accuracy_pct": 91.5,
+  "device_wilson_ci": [
+    86.81041292843443,
+    94.62542498225244
+  ],
+  "host_correct": 183,
+  "host_accuracy_pct": 91.5,
+  "host_wilson_ci": [
+    86.81041292843443,
+    94.62542498225244
+  ],
+  "cycles": {
+    "count": 10000,
+    "min": 655006,
+    "median": 665208,
+    "mean": 665277.0268,
+    "p99": 671284,
+    "max": 675472
+  },
+  "parity_ok": true
+}

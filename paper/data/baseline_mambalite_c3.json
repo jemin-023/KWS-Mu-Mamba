@@ -1,0 +1,122 @@
+{
+  "_provenance": "MambaLite-Micro (arXiv 2509.05488) 10-class keyword model, built from the C3 port in ~/.cache/kws-verify-session/baseline/c3bench and run on the same ESP32-C3 DevKitM-1 @160 MHz, ESP-IDF 6.1.0, 2026-10-30. Raw capture: board_mambalite_c3_raw.txt.",
+  "upstream": {
+    "url": "https://github.com/Whiten-Rock/MambaLite-Micro",
+    "commit": "44d51fce0f17ddadb6111c5e5554d1f7f6c67aff",
+    "commit_date": "2025-09-08",
+    "url_source": "the repository link on the first page of the arXiv PDF"
+  },
+  "library_files": {
+    "mamba.c": {
+      "sha256": "ba59a6af7f93027087f608d0351971bda685509c347d2f3d905a7d8b9e970da9",
+      "identical_to_upstream": [
+        "csrc/mamba.c"
+      ]
+    },
+    "mamba.h": {
+      "sha256": "a59c2a3848e06b879a0edbb5c75a40f2b46b3eed95b742038c35c077d412f3ee",
+      "identical_to_upstream": [
+        "csrc/mamba.h"
+      ]
+    },
+    "mamba_weights.c": {
+      "sha256": "b2076a7af394cceff64619c20e05803a89f18600faf1c3c20239087bfc8d9854",
+      "identical_to_upstream": [
+        "csrc/mamba_weights.c"
+      ]
+    },
+    "mamba_weights.h": {
+      "sha256": "1445cd135fcdd2c8daf3e729cab1b9d5a7c012a061b6b6c080a3e45800d2c7da",
+      "identical_to_upstream": [
+        "examples/mambakws-any-10/include/mamba_weights.h"
+      ]
+    },
+    "mambakws.c": {
+      "sha256": "ecb2ad708e6be19750ecdfcab43711df18adf2d9e674984bfcd592b727282cc9",
+      "identical_to_upstream": [
+        "examples/mambakws-any-10/include/mambakws.c"
+      ]
+    },
+    "matrix.c": {
+      "sha256": "62e7031a0acbde2b8c07843a10dee1faffbbbfd878f45d4714a373ac50b64f0b",
+      "identical_to_upstream": [
+        "csrc/matrix.c"
+      ]
+    },
+    "matrix.h": {
+      "sha256": "424389f3372bd38bb8d9dd62ea58cc0c3e785fb3078d5b68bd9278927f99c012",
+      "identical_to_upstream": [
+        "csrc/matrix.h"
+      ]
+    },
+    "sample_input.h": {
+      "sha256": "840df6165c5cd5cc488a510bf0b27ac05f69a0f99cf4b89fb1223cb3ff1b5cc1",
+      "identical_to_upstream": [
+        "examples/mambakws-any-10/include/sample_input.h"
+      ]
+    },
+    "tensor.c": {
+      "sha256": "8b5b6a58de4e94cb67b9ee7bd04c097262adc3a23bdf30179bfea51e082004a7",
+      "identical_to_upstream": [
+        "csrc/tensor.c"
+      ]
+    }
+  },
+  "all_library_files_identical_to_upstream": true,
+  "own_files_sha256": {
+    "src/main.c": "77b8ca48bb0fe905cc0849fd93c2cf87bead24c6d6a65c421e5200b27cfe5190",
+    "src/CMakeLists.txt": "dc527464cd83ec885f81aa9143cd59effdc71eecc7cfbe31b53e7df761002970",
+    "CMakeLists.txt": "262afae3b48abc966db2fb32541e36b974b63ece0e5f7bf807ed4d6f070f77a7",
+    "platformio.ini": "3737d7eb48faaf8d3474426bbe0044a29075466e3dfeede925c832d1f684e658",
+    "sdkconfig.defaults": "430718c7a4c0cc119bd9ddbf7a982011ba9715e6a04cde7ae45f418a46137365"
+  },
+  "build": {
+    "ram_static_pio_bytes": 26520,
+    "flash_used_bytes": 308054,
+    "firmware_bin_bytes": 308720
+  },
+  "model": "10-class keyword model of the upstream example (offline 1 s window), FP32",
+  "runs_in_order_of_appearance": [
+    {
+      "run": 1,
+      "pred": 9,
+      "us": 9737696,
+      "cycles": 1558031533,
+      "heap_before": 307940,
+      "heap_after": 227676,
+      "heap_min_ever": 10376
+    },
+    {
+      "run": 2,
+      "pred": 0,
+      "us": 464302,
+      "cycles": 74288432,
+      "heap_before": 227676,
+      "heap_after": 94160,
+      "heap_min_ever": 10376
+    },
+    {
+      "run": 1,
+      "pred": 9,
+      "us": 9737697,
+      "cycles": 1558031607,
+      "heap_before": 307940,
+      "heap_after": 227676,
+      "heap_min_ever": 10376
+    },
+    {
+      "run": 2,
+      "pred": 0,
+      "us": 464303,
+      "cycles": 74288568,
+      "heap_before": 227676,
+      "heap_after": 94160,
+      "heap_min_ever": 10376
+    }
+  ],
+  "boots_observed": 3,
+  "panics_observed": 2,
+  "panic_text": "Guru Meditation Error: Core 0 panic'ed (Load access fault). Exception was unhandled.",
+  "outcome": "Run 1 (fresh heap) and run 2 completed and were identical across two boots; the board then panicked in run 3 (94,160 B free before it, minimum free 10,376 B seen) and rebooted, repeating the cycle. Prediction and time differ between run 1 and run 2 for the same input. No steady-state latency figure can be given. No host-side check of the upstream example was run (the permission system denied compiling and running the cloned code on the host).",
+  "not_claimed": "No speed or memory ratio against the paper model is derived: the baseline does not give consistent repeated measurements."
+}

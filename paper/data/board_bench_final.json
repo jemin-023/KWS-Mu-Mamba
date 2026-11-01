@@ -1,0 +1,67 @@
+{
+  "_provenance": "ESP32-C3 DevKitM-1 (chip revision v0.4) @160 MHz, ESP-IDF 6.1.0 via PlatformIO, 2026-10-30. Paper model: weights 2f4bdc556afab73f, export 6a9a3c92 (residual Q5). Raw captures: board_fixed_final_boot.txt, board_f32_final_boot.txt, board_ablation_final_boot.txt, board_fixed_final_boot_after_baseline.txt; serial parity runs: serial_eval_final.json (1000 clips, seed 0) and serial_eval_final_seed1.json (200 clips, seed 1).",
+  "cpu_freq_hz": 160000000,
+  "fixed": {
+    "ctx_bytes": 6072,
+    "frontend_cycles_median": 130325,
+    "step_cycles_min": 659727,
+    "step_cycles_median": 662595,
+    "step_cycles_max": 665421,
+    "step_stack_used_bytes": 3680,
+    "heap_alloc_during_inference_bytes": 0,
+    "free_heap_before": 300500,
+    "free_heap_after": 300500,
+    "min_free_heap_after": 300500,
+    "flash_used_bytes": 204880,
+    "firmware_bin_bytes": 219072,
+    "ram_static_pio_bytes": 30376
+  },
+  "float_softfloat_same_model": {
+    "ctx_bytes": 11752,
+    "step_f32_cycles_median": 7238407,
+    "frontend_cycles_median": 128984,
+    "flash_used_bytes": 283078,
+    "firmware_bin_bytes": 290096,
+    "ram_static_pio_bytes": 108416
+  },
+  "softfloat_micro": {
+    "expf_cycles_per_call": 2831,
+    "float_mac_cycles": 227,
+    "int8xint16_mac_cycles": 9.0
+  },
+  "device_vs_host_bit_identity": {
+    "tokens": 50000,
+    "bit_identical": 50000,
+    "clips": 1000,
+    "clips_bit_identical": 1000,
+    "max_logit_diff": 0,
+    "seed": 0,
+    "second_run": {
+      "tokens": 10000,
+      "bit_identical": 10000,
+      "clips": 200,
+      "seed": 1
+    }
+  },
+  "serial_streaming_cycles_per_token": {
+    "count": 50000,
+    "min": 655099,
+    "median": 665300,
+    "mean": 665302.05678,
+    "p99": 671132,
+    "max": 675502
+  },
+  "c1_ablation": {
+    "c1_step_f32_cycles_median": 7239491,
+    "zoh_expf_step_cycles_median": 9147942,
+    "max_abs_logit_diff": 2.68220901e-06
+  },
+  "derived": {
+    "step_ms_fixed": 4.14121875,
+    "step_ms_float": 45.24004375,
+    "speedup_float_over_fixed": 10.92433085067047,
+    "real_time_factor_fixed": 0.20706093750000001,
+    "real_time_factor_float": 2.2620021875,
+    "static_plus_stack_bytes": 9752
+  }
+}
