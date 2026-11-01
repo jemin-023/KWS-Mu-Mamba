@@ -1,25 +1,34 @@
 #include <string.h>
+#ifdef MM_ENABLE_F32
 #include <math.h>
+#endif
 #include "mu_mamba.h"
+#ifdef MM_ENABLE_F32
 #include "mm_block.h"
+#endif
 #include "mm_block_q.h"
 #include "mm_math.h"
 
 /* Model weights pointers - zero RAM copy, accessed in place from flash const */
+#ifdef MM_ENABLE_F32
 static const mm_model_weights_f32_t *g_model_weights_f32 = NULL;
+#endif
 static const mm_model_weights_q_t   *g_model_weights_q   = NULL;
 
 extern const int16_t mm_lut_silu_q12[513];
 
+#ifdef MM_ENABLE_F32
 void mm_set_weights_f32(const mm_model_weights_f32_t *w) {
     g_model_weights_f32 = w;
 }
+#endif
 
 void mm_set_weights_q(const mm_model_weights_q_t *w) {
     g_model_weights_q = w;
 }
 
-/* Saturation tracking counters */
+/* Saturation tracking counters: debug builds only, so the firmware carries no extra .bss */
+#ifdef MM_DEBUG_SAT
 mm_sat_stats_t g_mm_sat_stats = {0};
 
 void mm_get_sat_stats(mm_sat_stats_t *out) {
@@ -29,6 +38,16 @@ void mm_get_sat_stats(mm_sat_stats_t *out) {
 void mm_reset_sat_stats(void) {
     memset(&g_mm_sat_stats, 0, sizeof(g_mm_sat_stats));
 }
+#endif
+
+size_t mm_weights_q_size(void) {
+    return sizeof(mm_model_weights_q_t);
+}
+#ifdef MM_ENABLE_F32
+size_t mm_weights_f32_size(void) {
+    return sizeof(mm_model_weights_f32_t);
+}
+#endif
 
 const char *mm_weights_id(void) {
 #ifdef MM_WEIGHTS_ID
@@ -38,7 +57,15 @@ const char *mm_weights_id(void) {
 #endif
 }
 
-int16_t mm_silu_q15(int16_t x) {
+const char *mm_export_id(void) {
+#ifdef MM_EXPORT_ID
+    return MM_EXPORT_ID;
+#else
+    return "unknown";
+#endif
+}
+
+int16_t mm_silu_q12(int16_t x) {
     return (int16_t)mm_lut_interp_s16(mm_lut_silu_q12, (int32_t)x, -(8 << 12), 7, 513);
 }
 
@@ -56,14 +83,15 @@ void mm_reset(mm_context_t *ctx) {
     if (!ctx) return;
     /* Reset streaming audio and layer persistent states without wiping weights */
     ctx->audio_buf_count = 0;
-    memset(ctx->conv_ring_f, 0, sizeof(ctx->conv_ring_f));
     memset(ctx->conv_ring_q, 0, sizeof(ctx->conv_ring_q));
-    memset(ctx->conv_ring_idx, 0, sizeof(ctx->conv_ring_idx));
-    memset(ctx->ssm_h_f, 0, sizeof(ctx->ssm_h_f));
     memset(ctx->ssm_h_q, 0, sizeof(ctx->ssm_h_q));
     memset(ctx->logits_q, 0, sizeof(ctx->logits_q));
+#ifdef MM_ENABLE_F32
+    memset(ctx->conv_ring_f, 0, sizeof(ctx->conv_ring_f));
+    memset(ctx->ssm_h_f, 0, sizeof(ctx->ssm_h_f));
     memset(ctx->logits_f, 0, sizeof(ctx->logits_f));
-    memset(ctx->smoothed_probs, 0, sizeof(ctx->smoothed_probs));
+#endif
+    memset(ctx->smoothed_margins, 0, sizeof(ctx->smoothed_margins));
     ctx->refractory_timer = 0;
 }
 
@@ -78,6 +106,7 @@ size_t mm_push_audio(mm_context_t *ctx, const int16_t *samples, size_t n_samples
     return to_copy;
 }
 
+#ifdef MM_ENABLE_F32
 int mm_step_f32(mm_context_t *ctx, int16_t *features_out, float *logits_out) {
     if (!ctx || !g_model_weights_f32 || ctx->audio_buf_count < MM_FRAME_LEN) {
         return 0; /* Need more audio samples or weights not loaded */
@@ -152,6 +181,7 @@ int mm_step_f32(mm_context_t *ctx, int16_t *features_out, float *logits_out) {
 
     return 1;
 }
+#endif
 
 int mm_step_q(mm_context_t *ctx, int16_t *features_out, int32_t *logits_out) {
     if (!ctx || !g_model_weights_q || ctx->audio_buf_count < MM_FRAME_LEN) {
@@ -172,14 +202,12 @@ int mm_step_q(mm_context_t *ctx, int16_t *features_out, int32_t *logits_out) {
         for (int m = 0; m < MM_MEL_BINS; m++) {
             acc += (int32_t)g_model_weights_q->stem_w[d][m] * ctx->mel_features[m];
         }
-        int64_t scaled = (acc * g_model_weights_q->stem_scale_mult[d]) >> g_model_weights_q->stem_scale_shift[d];
+        int64_t scaled = mm_requant(acc, g_model_weights_q->stem_scale_mult[d], g_model_weights_q->stem_scale_shift[d]);
 #ifdef MM_DEBUG_SAT
         g_mm_sat_stats.stem_total++;
         if (scaled > 32767 || scaled < -32768) g_mm_sat_stats.stem_sat++;
 #endif
-        if (scaled > 32767) scaled = 32767;
-        if (scaled < -32768) scaled = -32768;
-        h_cur[d] = (int16_t)scaled;
+        h_cur[d] = mm_sat16(scaled);
     }
 
     /* Residual Blocks: L=2 */
@@ -207,7 +235,12 @@ int mm_step_q(mm_context_t *ctx, int16_t *features_out, int32_t *logits_out) {
     int16_t h_norm[MM_DIM];
     for (int d = 0; d < MM_DIM; d++) {
         int32_t norm = (int32_t)(((int64_t)h_cur[d] * rsqrt_val) >> 12);
-        h_norm[d] = (int16_t)(((int32_t)norm * g_model_weights_q->final_norm_w[d]) >> 14);
+        int64_t tmp = ((int64_t)norm * g_model_weights_q->final_norm_w[d]) >> 14;
+#ifdef MM_DEBUG_SAT
+        g_mm_sat_stats.norm_out_total++;
+        if (tmp > 32767 || tmp < -32768) g_mm_sat_stats.norm_out_sat++;
+#endif
+        h_norm[d] = mm_sat16(tmp);
     }
 
     /* Head: W8A16 matvec -> 12 class logits (int32) */
@@ -216,8 +249,12 @@ int mm_step_q(mm_context_t *ctx, int16_t *features_out, int32_t *logits_out) {
         for (int d = 0; d < MM_DIM; d++) {
             acc += (int32_t)g_model_weights_q->head_w[c][d] * h_norm[d];
         }
-        int64_t scaled = (acc * g_model_weights_q->head_scale_mult[c]) >> g_model_weights_q->head_scale_shift[c];
-        ctx->logits_q[c] = (int32_t)scaled;
+        int64_t scaled = mm_requant(acc, g_model_weights_q->head_scale_mult[c], g_model_weights_q->head_scale_shift[c]);
+#ifdef MM_DEBUG_SAT
+        g_mm_sat_stats.logits_total++;
+        if (scaled > 2147483647LL || scaled < -2147483648LL) g_mm_sat_stats.logits_sat++;
+#endif
+        ctx->logits_q[c] = mm_sat32(scaled);
     }
 
     if (logits_out) {
@@ -236,8 +273,8 @@ int mm_step_q(mm_context_t *ctx, int16_t *features_out, int32_t *logits_out) {
 }
 
 #define MM_DECIDE_THRESHOLD_Q12 (6144) /* 1.5 in Q12 */
-#define MM_DECIDE_ALPHA_Q15     (22938) /* 0.7 in Q15 */
-#define MM_DECIDE_REFRACTORY    (25)    /* 25 tokens = 0.5 s */
+#define MM_DECIDE_ALPHA_Q15     (30474) /* 0.93 in Q15 */
+#define MM_DECIDE_REFRACTORY    (75)    /* 75 tokens = 1.5 s */
 
 int mm_decide_ex(mm_context_t *ctx, const int32_t *logits_q12, int32_t threshold_q12, int32_t ema_alpha_q15, int16_t refractory_tokens) {
     if (!ctx || !logits_q12) return -1;
@@ -251,9 +288,9 @@ int mm_decide_ex(mm_context_t *ctx, const int32_t *logits_q12, int32_t threshold
     int32_t one_minus_alpha = 32768 - ema_alpha_q15;
     for (int k = 0; k < 10; k++) {
         int32_t margin = logits_q12[k] - bg_max;
-        int64_t smoothed = ((int64_t)ema_alpha_q15 * ctx->smoothed_probs[k]) +
+        int64_t smoothed = ((int64_t)ema_alpha_q15 * ctx->smoothed_margins[k]) +
                            ((int64_t)one_minus_alpha * margin);
-        ctx->smoothed_probs[k] = (int32_t)(smoothed >> 15);
+        ctx->smoothed_margins[k] = (int32_t)(smoothed >> 15);
     }
 
     /* Refractory period handling */
@@ -266,8 +303,8 @@ int mm_decide_ex(mm_context_t *ctx, const int32_t *logits_q12, int32_t threshold
     int best_kw = -1;
     int32_t best_margin = threshold_q12;
     for (int k = 0; k < 10; k++) {
-        if (ctx->smoothed_probs[k] > best_margin) {
-            best_margin = ctx->smoothed_probs[k];
+        if (ctx->smoothed_margins[k] > best_margin) {
+            best_margin = ctx->smoothed_margins[k];
             best_kw = k;
         }
     }

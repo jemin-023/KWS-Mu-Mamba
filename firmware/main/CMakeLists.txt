@@ -3,6 +3,7 @@ idf_component_register(
         "main.c"
         "audio_serial.c"
         "bench.c"
+        "bench_ablation.c"
     INCLUDE_DIRS
         "."
     REQUIRES

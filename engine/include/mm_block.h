@@ -3,6 +3,7 @@
 
 #include "mu_mamba.h"
 
+#ifdef MM_ENABLE_F32
 /* Floating-point weights structure for one block */
 typedef struct {
     float norm_w[MM_DIM];                                      /* 32 */
@@ -34,5 +35,7 @@ void mm_block_step_f32(
     float h[MM_D_INNER][MM_D_STATE],
     float *x_out
 );
+
+#endif /* MM_ENABLE_F32 */
 
 #endif /* MM_BLOCK_H */

@@ -12,11 +12,11 @@ extern mm_sat_stats_t g_mm_sat_stats;
 #endif
 
 void mm_block_step_q(
-    const int16_t *x_in,
+    const int16_t *x_in,              /* Q(MM_Q_RESID) */
     const mm_block_weights_q_t *w,
-    int16_t conv_ring[MM_D_CONV - 1][MM_D_INNER],
-    int32_t h[MM_D_INNER][MM_D_STATE],
-    int16_t *x_out
+    int16_t conv_ring[MM_D_CONV - 1][MM_D_INNER], /* Q(MM_Q_INPROJ) */
+    int32_t h[MM_D_INNER][MM_D_STATE],            /* Q(12 + MM_Q_XPROJ) persistent state */
+    int16_t *x_out                     /* Q(MM_Q_RESID) */
 ) {
     /* 1. Integer RMSNorm */
     uint64_t sum_sq = 0;
@@ -30,7 +30,12 @@ void mm_block_step_q(
     int16_t x_norm[MM_DIM];
     for (int d = 0; d < MM_DIM; d++) {
         int32_t normalized = (int32_t)(((int64_t)x_in[d] * rsqrt_val) >> 12);
-        x_norm[d] = (int16_t)(((int32_t)normalized * w->norm_w[d]) >> 14);
+        int64_t tmp = ((int64_t)normalized * w->norm_w[d]) >> 14;
+#ifdef MM_DEBUG_SAT
+        g_mm_sat_stats.norm_out_total++;
+        if (tmp > 32767 || tmp < -32768) g_mm_sat_stats.norm_out_sat++;
+#endif
+        x_norm[d] = mm_sat16(tmp);
     }
 
     /* 2. in_proj: W8A16 matvec */
@@ -40,14 +45,12 @@ void mm_block_step_q(
         for (int d = 0; d < MM_DIM; d++) {
             acc += (int32_t)w->in_proj_w[i][d] * x_norm[d];
         }
-        int64_t scaled = ((int64_t)acc * w->in_proj_scale_mult[i]) >> w->in_proj_scale_shift[i];
+        int64_t scaled = mm_requant32(acc, w->in_proj_scale_mult[i], w->in_proj_scale_shift[i]);
 #ifdef MM_DEBUG_SAT
         g_mm_sat_stats.in_proj_total++;
         if (scaled > 32767 || scaled < -32768) g_mm_sat_stats.in_proj_sat++;
 #endif
-        if (scaled > 32767) scaled = 32767;
-        if (scaled < -32768) scaled = -32768;
-        xz[i] = (int16_t)scaled;
+        xz[i] = mm_sat16(scaled);
     }
 
     const int16_t *u = &xz[0];
@@ -66,13 +69,12 @@ void mm_block_step_q(
         conv_ring[1][d] = conv_ring[2][d];
         conv_ring[2][d] = u[d];
 
-        int64_t scaled = ((int64_t)acc * w->conv1d_scale_mult[d]) >> w->conv1d_scale_shift[d];
+        int64_t scaled = mm_requant32(acc, w->conv1d_scale_mult[d], w->conv1d_scale_shift[d]);
 #ifdef MM_DEBUG_SAT
         g_mm_sat_stats.conv_total++;
         if (scaled > 32767 || scaled < -32768) g_mm_sat_stats.conv_sat++;
 #endif
-        if (scaled > 32767) scaled = 32767;
-        if (scaled < -32768) scaled = -32768;
+        scaled = mm_sat16(scaled);
 
         /* SiLU LUT interpolation: domain [-8, 8] in Q12, min = -(8 << 12) = -32768, step_shift = 7 */
         u_prime[d] = (int16_t)mm_lut_interp_s16(mm_lut_silu_q12, (int32_t)scaled, -(8 << 12), 7, 513);
@@ -85,14 +87,12 @@ void mm_block_step_q(
         for (int d = 0; d < MM_D_INNER; d++) {
             acc += (int32_t)w->x_proj_w[i][d] * u_prime[d];
         }
-        int64_t scaled = ((int64_t)acc * w->x_proj_scale_mult[i]) >> w->x_proj_scale_shift[i];
+        int64_t scaled = mm_requant32(acc, w->x_proj_scale_mult[i], w->x_proj_scale_shift[i]);
 #ifdef MM_DEBUG_SAT
         g_mm_sat_stats.x_proj_total++;
         if (scaled > 32767 || scaled < -32768) g_mm_sat_stats.x_proj_sat++;
 #endif
-        if (scaled > 32767) scaled = 32767;
-        if (scaled < -32768) scaled = -32768;
-        x_ssm[i] = (int16_t)scaled;
+        x_ssm[i] = mm_sat16(scaled);
     }
 
     const int16_t *dt_rank_val = &x_ssm[0];
@@ -106,7 +106,11 @@ void mm_block_step_q(
         for (int r = 0; r < MM_DT_RANK; r++) {
             p += (int32_t)w->dt_proj_w[d][r] * dt_rank_val[r];
         }
-        int32_t p_scaled = (int32_t)(((int64_t)p * w->dt_proj_scale_mult[d]) >> w->dt_proj_scale_shift[d]);
+        int32_t p_scaled = (int32_t)mm_requant32(p, w->dt_proj_scale_mult[d], w->dt_proj_scale_shift[d]);
+#ifdef MM_DEBUG_SAT
+        g_mm_sat_stats.p_clamp_total++;
+        if (p_scaled > (12 << 11) || p_scaled < -(12 << 11)) g_mm_sat_stats.p_clamp_sat++;
+#endif
         if (p_scaled > (12 << 11)) p_scaled = (12 << 11);
         if (p_scaled < -(12 << 11)) p_scaled = -(12 << 11);
 
@@ -118,34 +122,54 @@ void mm_block_step_q(
 
         /* v = (delta * u_prime[d]) >> 24 in Q12 */
         int32_t v = (int32_t)(((int64_t)delta * u_prime[d] + (1 << 23)) >> 24);
+        /* MM_OPAQUE32 hides the value range from GCC so the 32x32->64 multiplies below stay mul+mulh */
+        /* instead of a full 64x64 multiply (3 mul + mulhu) on RV32. */
+        MM_OPAQUE32(v);
 
         /* C1 Recurrence: P_n = P_{n-1} * q in Q31 */
         int32_t P = q;
         int64_t dot_y = 0;
         for (int n = 0; n < MM_D_STATE; n++) {
             /* h is in Q(12 + MM_Q_XPROJ) */
+            int32_t dec = (int32_t)(((int64_t)P * h[d][n] + (1LL << 30)) >> 31);
+            int64_t new_h = (int64_t)dec + (int64_t)v * B[n];
 #ifdef MM_DEBUG_SAT
             g_mm_sat_stats.h_total++;
-            int64_t new_h = (int64_t)(((int64_t)P * h[d][n]) >> 31) + ((int64_t)v * (int32_t)B[n]);
             if (new_h > 2147483647LL || new_h < -2147483648LL) g_mm_sat_stats.h_sat++;
 #endif
-            h[d][n] = (int32_t)(((int64_t)P * h[d][n]) >> 31) + (v * (int32_t)B[n]);
-            dot_y += (int64_t)h[d][n] * C[n]; /* Q(12 + MM_Q_XPROJ) * Q(MM_Q_XPROJ) = Q(12 + 2 * MM_Q_XPROJ) */
-            P = (int32_t)(((int64_t)P * q) >> 31);
+            int32_t hn = mm_sat32(new_h);
+            MM_OPAQUE32(hn);
+            h[d][n] = hn;
+            dot_y += (int64_t)hn * C[n]; /* Q(12 + MM_Q_XPROJ) * Q(MM_Q_XPROJ) = Q(12 + 2 * MM_Q_XPROJ) */
+            P = (int32_t)((((int64_t)P * q) + (1LL << 30)) >> 31);
         }
 
         /* dot_y >> (2 * MM_Q_XPROJ) is in Q12. Add D_skip in Q12: (D_skip * u_prime) >> 12 */
         int64_t skip_val = ((int64_t)w->D_skip[d] * u_prime[d]) >> 12;
         int64_t dot_y_scaled = (dot_y + (1LL << (2 * MM_Q_XPROJ - 1))) >> (2 * MM_Q_XPROJ);
-        y[d] = (int32_t)(dot_y_scaled + skip_val);
+        int64_t y64 = dot_y_scaled + skip_val;
+#ifdef MM_DEBUG_SAT
+        g_mm_sat_stats.y_total++;
+        if (y64 > 2147483647LL || y64 < -2147483648LL) g_mm_sat_stats.y_sat++;
+#endif
+        y[d] = mm_sat32(y64);
     }
 
     /* 7. Gating: y_gate = (y * SiLU(z)) >> 12 */
     int32_t y_gate[MM_D_INNER];
     for (int d = 0; d < MM_D_INNER; d++) {
         int32_t z_q12 = (int32_t)z[d] << (12 - MM_Q_INPROJ);
+#ifdef MM_DEBUG_SAT
+        g_mm_sat_stats.gate_z_total++;
+        if (z_q12 > (8 << 12) || z_q12 < -(8 << 12)) g_mm_sat_stats.gate_z_sat++;
+#endif
         int16_t silu_z = (int16_t)mm_lut_interp_s16(mm_lut_silu_q12, z_q12, -(8 << 12), 7, 513);
-        y_gate[d] = (int32_t)(((int64_t)y[d] * silu_z) >> 12);
+        int64_t g64 = ((int64_t)y[d] * silu_z) >> 12;
+#ifdef MM_DEBUG_SAT
+        g_mm_sat_stats.y_gate_total++;
+        if (g64 > 2147483647LL || g64 < -2147483648LL) g_mm_sat_stats.y_gate_sat++;
+#endif
+        y_gate[d] = mm_sat32(g64);
     }
 
     /* 8. out_proj + residual */
@@ -154,14 +178,12 @@ void mm_block_step_q(
         for (int d = 0; d < MM_D_INNER; d++) {
             acc += (int64_t)w->out_proj_w[o][d] * y_gate[d];
         }
-        int64_t scaled = (acc * w->out_proj_scale_mult[o]) >> w->out_proj_scale_shift[o];
-        int32_t out_val = (int32_t)x_in[o] + (int32_t)scaled;
+        int64_t scaled = mm_requant(acc, w->out_proj_scale_mult[o], w->out_proj_scale_shift[o]);
+        int64_t out_val = (int64_t)x_in[o] + scaled;
 #ifdef MM_DEBUG_SAT
         g_mm_sat_stats.resid_total++;
         if (out_val > 32767 || out_val < -32768) g_mm_sat_stats.resid_sat++;
 #endif
-        if (out_val > 32767) out_val = 32767;
-        if (out_val < -32768) out_val = -32768;
-        x_out[o] = (int16_t)out_val;
+        x_out[o] = mm_sat16(out_val);
     }
 }

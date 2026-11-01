@@ -44,7 +44,7 @@ int32_t mm_log2_q8(uint32_t x) {
 }
 
 
-int32_t mm_rsqrt_q12(uint32_t x) {            /* returns 4096 / rms_raw; input Q format cancels */
+int32_t mm_rsqrt_q12(uint32_t x) {            /* returns floor(2^32 / isqrt(x << 16)) ~= 2^24 / sqrt(x), so that (v * result) >> 12 equals v / sqrt(x) in Q12; for x == 0 it returns 2^24 */
     if (x == 0) return 1 << 24;
     uint64_t n = (uint64_t)x << 16, res = 0, bit = (uint64_t)1 << 46;
     while (bit > n) bit >>= 2;
@@ -52,10 +52,6 @@ int32_t mm_rsqrt_q12(uint32_t x) {            /* returns 4096 / rms_raw; input Q
     if (res == 0) return 1 << 24;
     uint64_t r = ((uint64_t)1 << 32) / res;
     return r > (1u << 24) ? (1 << 24) : (int32_t)r;
-}
-
-int32_t mm_rsqrt_q15(uint32_t x) {
-    return mm_rsqrt_q12(x);
 }
 
 int32_t mm_lut_interp_s16(const int16_t *lut, int32_t x, int32_t x_min, int32_t step_shift, int32_t num_entries) {

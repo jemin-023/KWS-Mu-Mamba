@@ -10,9 +10,10 @@
 #define MM_NUM_LAYERS  2
 #define MM_NUM_CLASSES 12
 
-#define MM_Q_RESID     7
+#define MM_Q_RESID     5
 #define MM_Q_XPROJ     10
 #define MM_Q_INPROJ    11
-#define MM_WEIGHTS_ID  "3e3052cf5abd9675"
+#define MM_WEIGHTS_ID  "2f4bdc556afab73f"
+#define MM_EXPORT_ID   "6a9a3c92"
 
 #endif /* MM_CONFIG_H */

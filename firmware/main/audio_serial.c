@@ -143,9 +143,9 @@ int audio_serial_process_frame(mm_context_t *ctx) {
     } else if (cmd == CMD_BENCH) {
         mm_bench_stats_t stats;
         mm_bench_run(&stats);
-        uint8_t resp[] = { RESP_SYNC_0, RESP_SYNC_1, 0x00, (uint8_t)sizeof(stats) };
+        uint8_t resp[] = { RESP_SYNC_0, RESP_SYNC_1, 0x00, 64 };
         serial_write_bytes(resp, sizeof(resp));
-        serial_write_bytes((const uint8_t *)&stats, sizeof(stats));
+        serial_write_bytes((const uint8_t *)&stats, 64);
         return 1;
     } else if (cmd == CMD_AUDIO_CHUNK) {
         uint16_t n_samples = MM_FRAME_HOP; // 320 samples per hop

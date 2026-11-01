@@ -1,3 +1,4 @@
+#ifdef MM_ENABLE_F32
 #include <math.h>
 #include <string.h>
 #include "mu_mamba.h"
@@ -118,3 +119,5 @@ void mm_block_step_f32(
         x_out[o] = x_in[o] + acc;
     }
 }
+
+#endif /* MM_ENABLE_F32 */

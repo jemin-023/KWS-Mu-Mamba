@@ -4,9 +4,14 @@
 #include <stdint.h>
 #include "mu_mamba.h"
 
+/* The requantisation shifts (12 - Q, 2 * Q - 1) and Q15/Q12 intermediates assume every format has <= 12 fractional bits */
+#if MM_Q_INPROJ > 12 || MM_Q_XPROJ > 12 || MM_Q_RESID > 12
+#error "MM_Q_INPROJ, MM_Q_XPROJ and MM_Q_RESID must be <= 12 (shifts such as 12 - Q would go negative)"
+#endif
+
 /* Quantized block weights in W8A16 format */
 typedef struct {
-    /* RMSNorm gain in Q15 */
+    /* RMSNorm gain in Q14 */
     int16_t norm_w[MM_DIM];
 
     /* in_proj: 128 x 32 int8 weights, per-row Q15 scale multiplier + shift */
@@ -14,7 +19,7 @@ typedef struct {
     int16_t in_proj_scale_mult[2 * MM_D_INNER];
     uint8_t in_proj_scale_shift[2 * MM_D_INNER];
 
-    /* conv1d: 64 x 4 int8 weights, int16 bias, per-channel scale */
+    /* conv1d: 64 x 4 int8 weights, int32 bias, per-channel scale */
     int8_t  conv1d_w[MM_D_INNER][MM_D_CONV];
     int32_t conv1d_b[MM_D_INNER];
     int16_t conv1d_scale_mult[MM_D_INNER];
@@ -62,11 +67,11 @@ void mm_set_weights_q(const mm_model_weights_q_t *w);
 
 /* W8A16 single-token block execution */
 void mm_block_step_q(
-    const int16_t *x_in,              /* Q12 */
+    const int16_t *x_in,              /* Q(MM_Q_RESID) */
     const mm_block_weights_q_t *w,
-    int16_t conv_ring[MM_D_CONV - 1][MM_D_INNER], /* Q12 */
-    int32_t h[MM_D_INNER][MM_D_STATE],            /* int32 persistent state */
-    int16_t *x_out                     /* Q12 */
+    int16_t conv_ring[MM_D_CONV - 1][MM_D_INNER], /* Q(MM_Q_INPROJ) */
+    int32_t h[MM_D_INNER][MM_D_STATE],            /* Q(12 + MM_Q_XPROJ) persistent state */
+    int16_t *x_out                     /* Q(MM_Q_RESID) */
 );
 
 #endif /* MM_BLOCK_Q_H */

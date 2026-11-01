@@ -22,7 +22,8 @@ static mm_context_t g_ctx;
 void app_main(void) {
     printf("\n========================================\n");
     printf("   Mu-Mamba KWS Engine (ESP32-C3)       \n");
-    printf("   Model: S (D=32, L=2, N=8, C1 Scan)   \n");
+    printf("   Model %s export %s (D=%d L=%d N=%d C=%d)   \n",
+           mm_weights_id(), mm_export_id(), MM_DIM, MM_NUM_LAYERS, MM_D_STATE, MM_NUM_CLASSES);
     printf("========================================\n\n");
 
     /* Initialize engine context, front-end, and load flash weights */
@@ -33,6 +34,10 @@ void app_main(void) {
     mm_bench_stats_t bench_stats;
     mm_bench_run(&bench_stats);
     mm_bench_print(&bench_stats);
+    mm_bench_softfloat_print();
+#ifdef MM_BENCH_ZOH_ABLATION
+    mm_bench_ablation_print();
+#endif
 
     /* Initialize audio source */
     if (audio_source_serial.init) {
